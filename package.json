@@ -4,6 +4,7 @@
   "description": "",
   "private": true,
   "dependencies": {
+    "dat.gui": "^0.7.6",
     "lodash": "^4.17.10",
     "three-orbitcontrols": "^2.102.1"
   },

@@ -11,11 +11,13 @@ import Conf from '../com/Conf'
 * matType: 材质类型
 * size:默认null，不进行贴图重复设置，可以使num，或者[numS,numT]
 * }
+* type 贴图的布局方式，默认自动布局
 * */
 export default class BoxMesh extends Mesh{
     constructor(w,h,d, matParam,type=null){
         //先不指定形参
         super();
+        this.org='lbc';
         //现给予，再改变
         this.w=w;
         this.h=h;
@@ -31,6 +33,7 @@ export default class BoxMesh extends Mesh{
             MeshLambertMaterial,
             MeshPhongMaterial
         };
+        this.render=function(){}; //贴图加载成功
         this.init();
     }
     init(){
@@ -120,7 +123,18 @@ export default class BoxMesh extends Mesh{
     }
 
     geoUpdate(){
-        this.geometry=new BoxBufferGeometry(this.w,this.h,this.d);
+        const {w,h,d}=this;
+        this.geometry=new BoxBufferGeometry(w,h,d);
+        if(this.org==='lbc'){
+            let array=this.geometry.attributes.position.array;
+            array.forEach(function(ele,ind){
+                if(ind%3===0){
+                    array[ind]+=w/2;
+                    array[ind+1]+=h/2;
+                    array[ind+2]+=d/2;
+                }
+            });
+        }
     }
     setType(){
         if(this.autoType){
@@ -280,10 +294,14 @@ export default class BoxMesh extends Mesh{
         }
         //建立贴图
         let mapParam=matParam.mapParam;
+        let _this=this;
         if(mapParam&&mapParam.imgSrc){
             let {imgSrc,rotation,repeatS,repeatT,wrapS=RepeatWrapping,wrapT=RepeatWrapping}=mapParam;
             let textureLoader = new TextureLoader();
-            let texture = textureLoader.load(imgSrc);
+            let texture = textureLoader.load(imgSrc,function(){
+                _this.render();
+            });
+
             if(repeatS&&repeatT){
                 texture.wrapS=wrapS;
                 texture.wrapT=wrapT;

@@ -11,7 +11,7 @@ module.exports = {
     //出口
     output: {
         //文件名
-        filename: 'lv.js',
+        filename: 'liv.js',
         //路径
         path: path.resolve(__dirname, 'dist')
     },

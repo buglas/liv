@@ -33,16 +33,5 @@ export default class DiTai extends Group{
         meshLvK.name='lvK';
         meshTaiM.translateY(lh);
         this.add(meshTaiM);
-
-        /*setTimeout(function(){
-            meshTaim.setH(.2);
-            meshTaim.setMaterial({
-                mapParam:{
-                    imgSrc:'/src/images/huTao.jpg',
-                    size:.3
-                }
-            });
-        },0);*/
-
     }
 }
