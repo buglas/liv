@@ -88,11 +88,12 @@ let crting=false;
 let customDraging=false; //是否在执行自定义的拖拽
 let selectedObj=null; //正在移动的物体
 let ignoreObjs=[]; //排除当前操作对象之外的其它对象
-let validObjs=[]; //需要选择检测的对象集合
+let selectableObjs=[]; //可以被选择的对象集合
+let crashableObjs=[]; //可以被当前选择对象检测的对象集合
 let raycaster = new Raycaster();
 let transformControls; //拖拽器
 let offsetDist=new Vector3(); //鼠标选择物体时的位置和物体位置的差
-
+let suction=.1; //吸力
 
 let renderer=new WebGLRenderer();
 let domElement=renderer.domElement;
@@ -115,9 +116,6 @@ planeMesh.rotateX(-Math.PI / 2); //旋转网格模型
 // 设置接收阴影的投影面
 planeMesh.receiveShadow = true;
 //scene.add(planeMesh); //网格模型添加到场景中
-
-
-
 
 let axesHelper = new AxesHelper(200);
 axesHelper.translateY(.001);
@@ -170,22 +168,40 @@ transformControls = new TransformControls( camera, rec );
 scene.add( transformControls );
 ignoreObjsInclude(transformControls);
 
-let planeGeometry2 = new  BoxBufferGeometry(1, .2,1);
-let planeMaterial2 = new  MeshLambertMaterial({
+let boxGeo = new  BoxBufferGeometry(.4, .2,.4);
+let boxMat = new  MeshLambertMaterial({
     color: 0xffff00
 });
-let mesh2 = new  Mesh(planeGeometry2, planeMaterial2);
-mesh2.translateY(.1);
-mesh2.name='mesh2';
-mesh2.translateZ(-2);
-scene.add(mesh2);
-//transformControls.attach(mesh2);
+let boxMesh = new  Mesh(boxGeo, boxMat);
+boxMesh.translateZ(-0.2);
+boxMesh.translateX(2);
+boxMesh.name='boxMesh';
+scene.add(boxMesh);
 
-let diTai=new DiTai(.6,.03,.322,Mats.huTao,Mats.lvMoSha);
+
+let box3=new Box3();
+box3.setFromObject(boxMesh);
+
+//transformControls.attach(boxMesh);
+/*let diTai=new DiTai(.6,.03,.322,Mats.huTao,Mats.lvMoSha);
 scene.add(diTai);
-diTai.translateX(0.3);
 addRenderForObj(diTai);
 transformControls.attach(diTai);
+selectedObj=diTai;
+let center=getObjCenter(diTai);
+offsetDist=center.sub(diTai.position);*/
+
+/*
+setTimeout(function(){
+    //获取物体所在的
+    selectedObj.translateY(0.2);
+    //重新计算偏移
+    //获取鼠标点击处和物体
+    offsetDist.y-=0.2;
+    render();
+},3000)
+*/
+
 
 
 updateValidObjs();
@@ -240,10 +256,20 @@ function mouseupFn(){
 
 }
 function mousemoveFn(event){
-    //如果在创建家具，手动移动已经创建的家具
+    //如果选择了家具，手动移动已经创建的家具
     if(selectedObj){
+        //如果选择了家具
         if(customDraging){
+            //如是在执行自定义的拖拽
             moveCreatedObj(event);
+            //检测碰撞
+            checkCrash();
+        }else{
+            if(transformControls.axis){
+                //如果移动轴不为空
+                //检测碰撞
+                checkCrash();
+            }
         }
         render();
     }
@@ -275,7 +301,7 @@ function mousedownFn(event){
                 console.log('curSelectedObj',curSelectedObj);
                 //设置偏移距离
                 offsetDist=curSelectedObj.point.sub(sceneChild.position);
-                //offsetDist=sceneChild.position.sub(curSelectedObj.point);
+                //选择对象的差异判断
                 if(sceneChild===selectedObj){
                     return;
                 }else{
@@ -283,7 +309,8 @@ function mousedownFn(event){
                     transformControls.attach(sceneChild);
                     selectedObj=sceneChild;
                 }
-
+                //设置可碰撞列表,将当前选择的对象排除
+                updateCrashableObjs();
             }else{
                 //啥也没选择到
                 console.log('啥也没选择到');
@@ -300,7 +327,10 @@ function mousedownFn(event){
             let sceneChild=getSceneChild(curSelectedObj.object);
             transformControls.attach(sceneChild);
             selectedObj=sceneChild;
+            //设置偏移距离
             offsetDist=curSelectedObj.point.sub(sceneChild.position);
+            //设置可碰撞列表,将当前选择的对象排除
+            updateCrashableObjs();
         }
     }
     render();
@@ -325,7 +355,7 @@ function getSelectedObj(event){
     let pointer=getPointer( event,renderer.domElement);
     //获取射线
     raycaster.setFromCamera( pointer, camera );
-    var intersects = raycaster.intersectObjects( validObjs,true);
+    var intersects = raycaster.intersectObjects( selectableObjs,true);
     console.log('intersects',intersects);
     return intersects[0];
 }
@@ -344,14 +374,120 @@ function ignoreObjsInclude(obj){
     }
 }
 function updateValidObjs(){
-    validObjs=[];
+    selectableObjs=[];
     scene.children.forEach((ele)=>{
         if(!ignoreObjs.includes(ele)){
-            validObjs.push(ele)
+            selectableObjs.push(ele)
         }
     })
 }
+//设置可碰撞列表，以mesh 为单位分解，计算其边界
+//列表添加当前选择的物体
+function crashableObjsAdd(){
 
+}
+//列表删除当前选择的物体
+function updateCrashableObjs(){
+    crashableObjs=[];
+    let objs=[...selectableObjs];
+    let ind =objs.indexOf(selectedObj);
+    if(ind!=-1){
+        objs.splice(ind,1);
+    }
+    findChild(objs);
+    function findChild(objs){
+        objs.forEach((ele)=>{
+            if(ele.children.length){
+                findChild(ele.children);
+            }else{
+                //计算其box 边界
+                ele.box=getBox3(ele);
+                crashableObjs.push(ele);
+            }
+        })
+    }
+    console.log('crashableObjs',crashableObjs);
+
+}
+//检测碰撞
+function checkCrash(){
+    getCrashObjs();
+}
+function getCrashObjs(){
+    selectedObj.box=getBox3(selectedObj);
+    let {min,max}=selectedObj.box;
+    let [l1,b1,c1,r1,t1,f1]=[min.x,min.y,min.z,max.x,max.y,max.z];
+    let min1=selectedObj.box.min;
+    let max1=selectedObj.box.max;
+    //console.log('r1',r1);
+    //建立距离，遍历对比，取最小值
+    //let r1l2=l1r2=t1b2=b1t2=f1c2=c1f2=null;
+    //建立碰撞信息对象
+    let crashObjs={
+        r1l2:[],
+        l1r2:[],
+        t1b2:[],
+        b1t2:[],
+        f1c2:[],
+        c1f2:[],
+    }
+    //let crashObjs={};
+    //先判断x 轴
+    crashableObjs.forEach((ele,ind)=>{
+        let {min,max}=ele.box;
+        let min2=ele.box.min;
+        let max2=ele.box.max;
+        let [l2,b2,c2,r2,t2,f2]=[min.x,min.y,min.z,max.x,max.y,max.z];
+        let bt=t1<t2&&t1>b2 || b1<t2&&b1>b2;
+        let cf=f1<f2&&f1>c2 || c1<f2&&c1>c2;
+        let lr=l1<r2&&l1>l2 || r1<r2&&r1>l2;
+        let r1l2Dist=Math.abs(r1-l2);
+        let l1r2Dist=Math.abs(l1-r2);
+        let t1b2Dist=Math.abs(t1-b2);
+        let b1t2Dist=Math.abs(b1-t2);
+        let f1c2Dist=Math.abs(f1-c2);
+        let c1f2Dist=Math.abs(c1-f2);
+        //r 面
+        crashObjAdd(crashObjs['r1l2'],ele,r1l2Dist,bt,cf,suction);
+        //l 面
+        crashObjAdd(crashObjs['l1r2'],ele,l1r2Dist,bt,cf,suction);
+        //t 面
+        crashObjAdd(crashObjs['t1b2'],ele,t1b2Dist,lr,cf,suction);
+        //b 面
+        crashObjAdd(crashObjs['b1t2'],ele,b1t2Dist,lr,cf,suction);
+        //f 面
+        crashObjAdd(crashObjs['f1c2'],ele,f1c2Dist,lr,bt,suction);
+        //c 面
+        crashObjAdd(crashObjs['c1f2'],ele,c1f2Dist,lr,bt,suction);
+
+
+    })
+}
+function crashObjAdd(r1l2,ele,dist,bt,cf,suction){
+    if( (dist<suction)&&bt&&cf){
+        console.log('dist',dist);
+        let obj={object:ele,distance:dist};
+        if(r1l2.length){
+            if(r1l2[ind-1].distance>dist){
+                r1l2.unshift(obj);
+            }else{
+                r1l2.push(obj);
+            }
+        }else{
+            r1l2[0]=obj;
+
+        }
+    }
+}
+function checkPlaneCrash(r1,l2,t1,t2,b1,b2,f1,f2,c1,c2,suction){
+    let r1l2=r1-l2;
+    //console.log('r1l2',r1l2);
+    if( (r1l2<suction)&&(t1<t2&&t1>b2 || b1<t2&&b1>b2)&&(f1<f2&&f1>c2 || c1<f2&&c1>c2) ){
+        return r1l2;
+    }else{
+        return null;
+    }
+}
 //建立地台
 function crtDiTai(){
     let diTai=new DiTai(.6,.03,.322,Mats.huTao,Mats.lvMoSha);
@@ -366,19 +502,27 @@ function crtDiTai(){
     offsetDist=center.sub(diTai.position);
     crting=true;
 
-    //若有选择的对象，便将对象取消选择
+    //若有选择的对象，便将对象的操作轴消掉
     transformControls.detach(transformControls.object);
+
+    //设置可碰撞列表,将当前选择的对象排除
+    updateCrashableObjs();
+
     render();
 }
 //设置所选对象的偏移
 
 //获取对象的中心点
 function getObjCenter(object){
-    let box3=new THREE.Box3();
-    box3.setFromObject(object);
+    let box3=getBox3(object);
     let center=new THREE.Vector3();
     center=box3.getCenter(center);
     return center;
+}
+function getBox3(object){
+    let box3=new THREE.Box3();
+    box3.setFromObject(object);
+    return box3;
 }
 //移动已经创建的物体
 function moveCreatedObj(event){
@@ -388,7 +532,12 @@ function moveCreatedObj(event){
     let ray=raycaster.ray;
     //地面
     let plane=new Plane(new Vector3(0,1,0));
-    plane.translate(new Vector3(0,offsetDist.y,0))
+    //水平面时，Y 轴的相对移动会被这一加一减抵消为0，position 是相对位移，y 为0 就是对象的高度位置不变
+    //因此，物体的位置变化就只剩下了x,y
+    //focuse 焦点随鼠标二变；
+    //offsetDist 恒定不变；除非它脱离的操作轴位移。因为offsetDist 形成的根本就是操作轴减对象的position
+    let y=offsetDist.y+selectedObj.position.y;
+    plane.translate(new Vector3(0,y,0));
     //焦点及其是否有焦点
     let focus=new Vector3();
     focus=ray.intersectPlane(plane,focus);
@@ -396,6 +545,7 @@ function moveCreatedObj(event){
     if(focus){
         selectedObj.visible=true;
         //鼠标选择点减去偏移量
+        //
         selectedObj.position.copy(focus.sub(offsetDist));
         selectedObj.updateMatrix();
     }else{
