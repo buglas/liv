@@ -101,7 +101,7 @@ let selectableObjs=[]; //可以被选择的对象集合
 let crashableObjs=[]; //可以被当前选择对象检测的对象集合
 let raycaster = new Raycaster();
 let transCtrl2; //拖拽器
-let offsetDist=new Vector3(); //鼠标选择物体时的位置和物体位置的差
+let mouseSubObj=new Vector3(); //鼠标选择物体时的位置和物体位置的差
 let suction=.1; //吸力
 
 let renderer=new WebGLRenderer();
@@ -206,14 +206,14 @@ addRenderForObj(diTai);
 transCtrl2.attach(diTai);
 selectedObj=diTai;
 let center=getObjCenter(diTai);
-offsetDist=center.sub(diTai.position);*/
+mouseSubObj=center.sub(diTai.position);*/
 
 /*setTimeout(function(){
     //获取物体所在的
     selectedObj.translateY(0.2);
     //重新计算偏移
     //获取鼠标点击处和物体
-    offsetDist.y-=0.2;
+    mouseSubObj.y-=0.2;
     render();
 },3000)*/
 
@@ -313,7 +313,7 @@ function mousedownFn(event){
                 orbitControls.enabled =false;
                 setCustomDragingAxis();
                 //设置偏移距离
-                offsetDist=curSelectedObj.point.sub(sceneChild.position);
+                mouseSubObj=curSelectedObj.point.sub(sceneChild.position);
                 //选择对象的差异判断
                 if(sceneChild===selectedObj){
                     return;
@@ -341,7 +341,7 @@ function mousedownFn(event){
             transCtrl2.attach(sceneChild);
             selectedObj=sceneChild;
             //设置偏移距离
-            offsetDist=curSelectedObj.point.sub(sceneChild.position);
+            mouseSubObj=curSelectedObj.point.sub(sceneChild.position);
             //设置可碰撞列表,将当前选择的对象排除
             updateCrashableObjs();
         }
@@ -560,7 +560,7 @@ function crtDiTai(){
     ignoreObjsInclude(transCtrl2);
     updateSelectableObjs();
     let center=getObjCenter(diTai);
-    offsetDist=center.sub(diTai.position);
+    mouseSubObj=center.sub(diTai.position);
     crting=true;
 
     //若有选择的对象，便将对象的操作轴消掉
@@ -596,8 +596,8 @@ function moveCreatedObj(event){
     //水平面时，Y 轴的相对移动会被这一加一减抵消为0，position 是相对位移，y 为0 就是对象的高度位置不变
     //因此，物体的位置变化就只剩下了x,y
     //focuse 焦点随鼠标二变；
-    //offsetDist 恒定不变；除非它脱离的操作轴位移。因为offsetDist 形成的根本就是操作轴减对象的position
-    let y=offsetDist.y+selectedObj.position.y;
+    //mouseSubObj 恒定不变；除非它脱离的操作轴位移。因为mouseSubObj 形成的根本就是操作轴减对象的position
+    let y=mouseSubObj.y+selectedObj.position.y;
     plane.translate(new Vector3(0,y,0));
     //焦点及其是否有焦点
     let focus=new Vector3();
@@ -607,7 +607,7 @@ function moveCreatedObj(event){
         selectedObj.visible=true;
         //鼠标选择点减去偏移量
         //
-        selectedObj.position.copy(focus.sub(offsetDist));
+        selectedObj.position.copy(focus.sub(mouseSubObj));
         selectedObj.updateMatrix();
     }else{
         selectedObj.visible=false;

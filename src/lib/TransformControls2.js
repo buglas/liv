@@ -72,6 +72,8 @@ export default class TransformControls2 extends Group{
         this.hoverAxis=null;
         //可见性
         this.visible=false;
+        //视图
+        this.view='p';
         //事件列表
         this.events={
             //轴是否被激活。可解决orbitControls 拖拽时遇到的冲突
@@ -210,6 +212,7 @@ export default class TransformControls2 extends Group{
         //若鼠标点击的位置在视平线以上，相机到鼠标的射线是不会和地面产生焦点的
         if(focus){
             this.object.visible=true;
+            this.visible=true;
             //鼠标选择点减去偏移量
             //焦点处就是Transform 位
             //焦点减偏移，是为对象位
@@ -224,10 +227,20 @@ export default class TransformControls2 extends Group{
             }
         }else{
             this.object.visible=false;
+            this.visible=false;
         }
         this.events['change']();
     }
     getPlane(){
+        //平面的朝向
+        let axis=this.axis;
+        let plane=new Plane(new Vector3(0,1,0));
+        //平面位移到鼠标所在处
+        let y=this.position.y;
+        plane.translate(new Vector3(0,y,0));
+        return plane;
+    }
+    /*getPlane(){
         let camDir=new Vector3();
         camDir=this.camera.getWorldDirection(camDir);
         //平面的朝向
@@ -237,7 +250,7 @@ export default class TransformControls2 extends Group{
         //平面位移到鼠标所在处
         plane.translate(translatePos);
         return plane;
-    }
+    }*/
     getVector3ByAxis(){
         switch (this.axis){
             case 'x':
