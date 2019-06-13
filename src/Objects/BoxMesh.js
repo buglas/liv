@@ -2,7 +2,7 @@
 * 分体厅柜-地台
 * */
 import {BoxBufferGeometry,RepeatWrapping,MeshLambertMaterial,Mesh,Texture,ImageLoader,TextureLoader,MeshPhongMaterial} from 'three'
-import Conf from '../com/Conf'
+
 /*
 * matParam:
 * 正常的Material 参数

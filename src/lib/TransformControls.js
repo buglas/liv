@@ -138,7 +138,6 @@ THREE.TransformControls = function ( camera, domElement ) {
         box3.setFromObject(object);
         let center=new THREE.Vector3();
         center=box3.getCenter(center);
-
         let pos=object.position.clone();
         //对象中心点减去对象位置
         //原理是相对移动的叠加

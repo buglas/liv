@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>地台</title>
+    <style>
+        *{
+            touch-action: none;
+        }
+        #crtBtn{
+            position:absolute;
+            width:100px;
+            height:40px;
+            border:1px solid #fff;
+            color: #fff;
+            top:0;
+            left:80px;
+        }
+    </style>
+</head>
+<body style="margin: 0;">
+
+<div id="rec">
+    <div id="crtBtn" type="button">crtBtn</div>
+</div>
+<script type="text/javascript" src="/dist/liv.js"></script>
+<script type="text/javascript" src="./libs/dat.gui.js"></script>
+
+<script>
+    console.log('liv',Liv);
+    const {
+        DiTai,Mats,
+        Scene,PerspectiveCamera,WebGLRenderer,Color,
+        Geometry,
+        AxesHelper,PlaneGeometry,PlaneBufferGeometry,SphereGeometry,BoxGeometry,CylinderGeometry,
+        BufferGeometry,CylinderBufferGeometry,BoxBufferGeometry,
+        BufferAttribute,
+        Sprite,
+        MeshBasicMaterial,MeshLambertMaterial,PointsMaterial,LineBasicMaterial,SpriteMaterial,MeshPhongMaterial,
+        Points,Mesh,Line,SkinnedMesh,
+        AmbientLight,SpotLight,PointLight,DirectionalLight,
+        Fog,
+        Vector2,Vector3,Face3,
+        Group,
+        KeyframeTrack,AnimationClip,AnimationMixer,
+        Clock,
+        ObjectLoader,AudioLoader,
+        Bone,SkeletonHelper,
+        AudioListener,
+        PositionalAudio,Audio,
+        AudioAnalyser,
+        Raycaster,
+        DirectionalLightHelper,
+        OrbitControls,
+        Stats,
+    } =Liv;
+
+    let {innerWidth,innerHeight}=window;
+    innerHeight-=5;
+    let rec=document.getElementById('rec');
+    let statsDom=document.getElementById('statsDom');
+
+    let renderer=new WebGLRenderer();
+    let clearColor=new Color(0x333333);
+    renderer.setClearColor(clearColor);
+    renderer.setSize(innerWidth,innerHeight);
+    renderer.shadowMap.enabled=true;
+    rec.appendChild(renderer.domElement);
+
+    let scene=new Scene();
+
+    let boxGeo = new  BoxBufferGeometry(.4, .2,.8);
+    let boxMat = new  MeshLambertMaterial({
+        color: 0xffff00
+    });
+    let boxMesh = new  Mesh(boxGeo, boxMat);
+    boxMesh.translateX(1);
+    boxMesh.name='boxMesh';
+    scene.add(boxMesh);
+
+
+
+    let axesHelper = new AxesHelper(200);
+    axesHelper.translateY(.001);
+    scene.add(axesHelper);
+    console.log('axesHelper',axesHelper);
+
+    //环境光   环境光颜色RGB成分分别和物体材质颜色RGB成分分别相乘
+    let ambient = new  AmbientLight(0x444444);
+    scene.add(ambient); //环境光对象添加到scene场景中
+
+    // 方向光
+    let directionalLight = new  DirectionalLight(0xffffff, 1);
+    // 设置光源位置
+    directionalLight.position.set(3, 5, 2);
+    scene.add(directionalLight);
+    // 设置用于计算阴影的光源对象
+    directionalLight.castShadow = true;
+    // 设置计算阴影的区域，最好刚好紧密包围在对象周围
+    // 计算阴影的区域过大：模糊  过小：看不到或显示不完整
+    directionalLight.shadow.camera.near = .05;
+    directionalLight.shadow.camera.far = 10;
+    directionalLight.shadow.camera.left = -2;
+    directionalLight.shadow.camera.right = 2;
+    directionalLight.shadow.camera.top = 2;
+    directionalLight.shadow.camera.bottom = -2;
+    // 设置mapSize属性可以使阴影更清晰，不那么模糊
+    directionalLight.shadow.mapSize.set(2048,2048);
+
+    let directionalLightHelper = new DirectionalLightHelper( directionalLight, 5 );
+    scene.add(directionalLightHelper);
+
+
+
+    let camera=new PerspectiveCamera(45,innerWidth/innerHeight,0.1,1000);
+    camera.position.set(-.36, 1.2, 2);
+    camera.lookAt(scene.position);
+    scene.add(camera);
+
+    let stats=new Stats();
+    rec.appendChild( stats.dom );
+
+    let boxGeo2 = new  BoxBufferGeometry(1, 1,1);
+    let boxMat2 = new  MeshLambertMaterial({
+        depthTest: false,
+        depthWrite: false,
+        color: 0xff00ff,
+    });
+    let boxMesh2 = new  Mesh(boxGeo2, boxMat2);
+    boxMesh2.name='boxMesh2';
+    scene.add(boxMesh2);
+    let size=1;
+
+    let orbitControls = new OrbitControls(camera);
+    //orbitControls.target=new Vector3(.7,.4,0);
+    orbitControls.target=new Vector3(.7,0,0);
+    orbitControls.update();
+    orbitControls.addEventListener( 'change', function(){
+        setScalar();
+        render();
+    } );
+
+    setScalar();
+    render();
+    function render() {
+        stats.begin();
+        renderer.render(scene, camera);
+        stats.end();
+    }
+
+    function setScalar(){
+        let worldPosition=new Vector3();
+        worldPosition=boxMesh2.getWorldPosition(worldPosition);
+        var eyeDistance = worldPosition.distanceTo( camera.position);
+        boxMesh2.scale.set( 1, 1, 1 ).multiplyScalar( eyeDistance * size / 7 );
+    }
+
+
+</script>
+</body>
+</html>
