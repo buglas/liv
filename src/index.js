@@ -98,8 +98,8 @@ let view='p';
 let ignoreObjs=[];
 //可以被选择的对象集合
 let selectableObjs=[];
-//要创建的对象
-let creatingObj=null;
+//点击时间 
+let clickTime=null;
 
 let renderer=new WebGLRenderer();
 let clearColor=new Color(0x333333);
@@ -193,7 +193,7 @@ furnsGui.open();
 
 
 //此事件实际上可以被覆盖掉的
-transCtrl2.addEventListener( 'change', render );
+//transCtrl2.addEventListener( 'change', render );
 //解决拖拽冲突
 transCtrl2.addEventListener( 'dragging-changed', function ( event ) {
     orbitControls.enabled = ! event.value;
@@ -202,18 +202,52 @@ transCtrl2.addEventListener( 'dragging-changed', function ( event ) {
 domElement.addEventListener('mouseup',mouseupFn);
 domElement.addEventListener('mousemove',mousemoveFn);
 domElement.addEventListener('mousedown',mousedownFn);
-//domElement.addEventListener('mouseover',mouseoverFn);
 
 function mouseupFn(){
     //render();
 }
 function mousemoveFn(){
-    
+    render();
 }
 function mousedownFn(){
+    updateSelectableObjs();
     if (transCtrl2.axis){
-        //render();
-    } 
+        return;
+    }
+    //选择对象
+    let curSelectedObj=transCtrl2.getIntersectObject(event,selectableObjs);
+    if(curSelectedObj){
+        //选择到了对象
+        console.log('选择到了对象');
+        let sceneChild=getSceneChild(curSelectedObj.object);
+        //注册拖拽对象，就像crt 家具时那样
+        orbitControls.enabled =false;
+
+        //设置偏移距离
+        transCtrl2.mouseSubObj=curSelectedObj.point.sub(sceneChild.position);
+        //选择对象的差异判断
+        let transObj=transCtrl2.object;
+        if(transObj){
+            if(sceneChild!==transObj){
+                console.log('sceneChild!==transObj');
+                transCtrl2.detach(transObj);
+                transCtrl2.attach(sceneChild);
+                console.log(transCtrl2.axis);
+            }
+        }else{
+            transCtrl2.attach(sceneChild);
+        }
+        //设置拖拽轴
+        setDragAxisByView();
+
+        //设置可碰撞列表,将当前选择的对象排除
+        //updateCrashableObjs();
+    }else{
+        //啥也没选择到
+        console.log('啥也没选择到');
+        //记下鼠标按下的事件，等鼠标抬起时，根据此事件判断是否取消选择
+        clickTime=new Date();
+    }
 }
 
 //要忽略的对象
@@ -231,7 +265,6 @@ function crtDiTai(){
         transCtrl2.detach();
         render();
     }
-    creatingObj=null;
     //建立地台
     let diTai=new DiTai(.6,.03,.322,Mats.huTao,Mats.lvMoSha);
     diTai.visible=false;
@@ -242,45 +275,31 @@ function crtDiTai(){
     transCtrl2.attach(diTai);
     //设置transCtrl 的拖拽轴
     setDragAxisByView();
+    if(transCtrl2.view==='p'){
+        diTai.visible=false;
+        transCtrl2.visible=false;
+    }
     //设置可碰撞列表,将当前选择的对象排除
     //updateCrashableObjs();
 
-    creatingObj='diTai';
 
 }
 
-function mouseoverFn(){
-    if(creatingObj){
-        creatingObj=null;
-        //建立地台
-        let diTai=new DiTai(.6,.03,.322,Mats.huTao,Mats.lvMoSha);
-        diTai.visible=false;
-        let center=getObjCenter(diTai);
-        let offsetDist=center.sub(diTai.position);
-        transCtrl2.mouseSubObj=offsetDist;
-        scene.add(diTai);
-        transCtrl2.attach(diTai);
-        //设置transCtrl 的拖拽轴
-        setDragAxisByView();
-        //设置可碰撞列表,将当前选择的对象排除
-        //updateCrashableObjs();
-    }
 
-}
 //根据view 设置拖拽轴
 function setDragAxisByView(){
-    switch (view){
+    switch (transCtrl2.view){
         case 'p':
         case 't':
-            transCtrl2.axis='xz';
+            transCtrl2.setAxis('xz');
             break;
         case 'f':
         case 'c':
-            transCtrl2.axis='xy';
+            transCtrl2.setAxis('xy');
             break;
         case 'l':
         case 'r':
-            transCtrl2.axis='zy';
+            transCtrl2.setAxis('zy');
             break;
     }
 }
@@ -306,4 +325,19 @@ function getBox3(object){
     return box3;
 }
 
+function getSceneChild(curSelectedObj){
+    let sceneChildren=scene.children;
+    let sceneChild=null;
+    findParent(curSelectedObj);
+    function findParent(obj){
+        if(obj){
+            if(sceneChildren.includes(obj)){
+                sceneChild= obj;
+            }else{
+                findParent(obj.parent);
+            }
+        }
+    }
+    return sceneChild;
+}
 

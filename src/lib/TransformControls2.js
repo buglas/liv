@@ -217,7 +217,6 @@ export default class TransformControls2 extends Group{
             //焦点处就是Transform 位
             //焦点减偏移，是为对象位
             let objPos=focus.sub(this.mouseSubObj);
-            console.log('objPos',objPos);
             let transPos=objPos.clone().add(this.transSubObj);
             let axis=this.axis;
             for(let i=0;i<axis.length;i++){
@@ -225,6 +224,8 @@ export default class TransformControls2 extends Group{
                 this.object.position[axisi]=objPos[axisi];
                 this.position[axisi]=transPos[axisi];
             }
+            this.object.updateMatrix();
+            this.updateMatrix();
         }else{
             this.object.visible=false;
             this.visible=false;
@@ -234,23 +235,26 @@ export default class TransformControls2 extends Group{
     getPlane(){
         //平面的朝向
         let axis=this.axis;
-        let plane=new Plane(new Vector3(0,1,0));
-        //平面位移到鼠标所在处
-        let y=this.position.y;
-        plane.translate(new Vector3(0,y,0));
+        let plane=null;
+        if((axis==='x'||axis==='z'||axis==='xz')&&this.view==='p'){
+            console.log('ddddd',this.mouseSubObj.y);
+            //只有操作特定的轴和视图才如此
+
+            plane=new Plane(new Vector3(0,1,0));
+            let y=this.mouseSubObj.y+this.object.position.y;
+            plane.translate(new Vector3(0,y,0));
+        }else{
+            let camDir=new Vector3();
+            camDir=this.camera.getWorldDirection(camDir);
+            //平面的朝向
+            plane=new Plane(camDir);
+            let objPos=this.object.position.clone();
+            let translatePos=objPos.add(this.mouseSubObj);
+            //平面位移到鼠标所在处
+            plane.translate(objPos);
+        }
         return plane;
     }
-    /*getPlane(){
-        let camDir=new Vector3();
-        camDir=this.camera.getWorldDirection(camDir);
-        //平面的朝向
-        let plane=new Plane(camDir);
-        let objPos=this.object.position.clone();
-        let translatePos=objPos.add(this.mouseSubObj);
-        //平面位移到鼠标所在处
-        plane.translate(translatePos);
-        return plane;
-    }*/
     getVector3ByAxis(){
         switch (this.axis){
             case 'x':
@@ -344,6 +348,8 @@ export default class TransformControls2 extends Group{
         //原理是相对移动的叠加
         this.transSubObj=center.sub(pos);
         this.position.copy(pos.add(this.transSubObj));
+
+        this.setScalar();
 
     }
     detach(){

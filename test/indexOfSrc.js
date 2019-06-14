@@ -233,7 +233,7 @@ furnsGui.open();
 
 
 
-let mouseDownTime=null;
+let clickTime=null;
 rec.addEventListener('mouseup',mouseupFn);
 rec.addEventListener('mousemove',mousemoveFn);
 rec.addEventListener('mousedown',mousedownFn);
@@ -247,8 +247,8 @@ function mouseupFn(){
         render();
     }
     //有此时间，就是点击在了空处
-    if(mouseDownTime){
-        let timeDist=new Date()-mouseDownTime;
+    if(clickTime){
+        let timeDist=new Date()-clickTime;
         console.log('timeDist',timeDist);
         //此逻辑可外置，亦可内置，特殊情况特殊对待
         if(timeDist<300){
@@ -258,7 +258,7 @@ function mouseupFn(){
             render();
         }else{
             //借助orbit 旋转场景，物体依旧处于选择状态
-            mouseDownTime=null;
+            clickTime=null;
         }
     }
     if(customDraging){
@@ -311,7 +311,7 @@ function mousedownFn(event){
                 let sceneChild=getSceneChild(curSelectedObj.object);
                 //注册拖拽对象，就像crt 家具时那样
                 orbitControls.enabled =false;
-                setCustomDragingAxis();
+                setDragAxisByView();
                 //设置偏移距离
                 mouseSubObj=curSelectedObj.point.sub(sceneChild.position);
                 //选择对象的差异判断
@@ -328,7 +328,7 @@ function mousedownFn(event){
                 //啥也没选择到
                 console.log('啥也没选择到');
                 //记下鼠标按下的事件，等鼠标抬起时，根据此事件判断是否取消选择
-                mouseDownTime=new Date();
+                clickTime=new Date();
             }
         }
     }else{
@@ -348,7 +348,7 @@ function mousedownFn(event){
     }
     render();
 }
-function setCustomDragingAxis(){
+function setDragAxisByView(){
     switch (view){
         case 'p':
         case 't':
@@ -555,7 +555,7 @@ function crtDiTai(){
     diTai.visible=false;
     scene.add(diTai);
 
-    setCustomDragingAxis();
+    setDragAxisByView();
     selectedObj=diTai;
     ignoreObjsInclude(transCtrl2);
     updateSelectableObjs();
