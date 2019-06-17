@@ -98,8 +98,12 @@ let view='p';
 let ignoreObjs=[];
 //可以被选择的对象集合
 let selectableObjs=[];
+//可以被当前选择对象检测的对象集合
+let crashableObjs=[];
 //点击时间 
 let clickTime=null;
+//吸力
+let suction=.1;
 
 let renderer=new WebGLRenderer();
 let clearColor=new Color(0x333333);
@@ -198,16 +202,33 @@ furnsGui.open();
 transCtrl2.addEventListener( 'dragging-changed', function ( event ) {
     orbitControls.enabled = ! event.value;
 } );
-
+transCtrl2.addEventListener( 'change', function ( event ) {
+    render();
+} );
 domElement.addEventListener('mouseup',mouseupFn);
 domElement.addEventListener('mousemove',mousemoveFn);
 domElement.addEventListener('mousedown',mousedownFn);
 
 function mouseupFn(){
-    //render();
+    if(clickTime){
+        let timeDist=new Date()-clickTime;
+        //此逻辑可外置，亦可内置，特殊情况特殊对待
+        if(timeDist<300){
+            //取消对象选择
+            transCtrl2.detach();
+            render();
+        }else{
+            //借助orbit 旋转场景，物体依旧处于选择状态
+            clickTime=null;
+        }
+    }
 }
 function mousemoveFn(){
-    render();
+    if(transCtrl2.axis){
+        //如果移动轴不为空
+        //检测碰撞
+        checkCrash();
+    }
 }
 function mousedownFn(){
     updateSelectableObjs();
@@ -229,13 +250,15 @@ function mousedownFn(){
         let transObj=transCtrl2.object;
         if(transObj){
             if(sceneChild!==transObj){
-                console.log('sceneChild!==transObj');
                 transCtrl2.detach(transObj);
                 transCtrl2.attach(sceneChild);
-                console.log(transCtrl2.axis);
+                updateCrashableObjs();
+                render();
             }
         }else{
             transCtrl2.attach(sceneChild);
+            updateCrashableObjs();
+            render();
         }
         //设置拖拽轴
         setDragAxisByView();
@@ -280,7 +303,7 @@ function crtDiTai(){
         transCtrl2.visible=false;
     }
     //设置可碰撞列表,将当前选择的对象排除
-    //updateCrashableObjs();
+    updateCrashableObjs();
 
 
 }
@@ -319,12 +342,8 @@ function getObjCenter(object){
     center=box3.getCenter(center);
     return center;
 }
-function getBox3(object){
-    let box3=new THREE.Box3();
-    box3.setFromObject(object);
-    return box3;
-}
 
+//获取场景之下的一级子物体
 function getSceneChild(curSelectedObj){
     let sceneChildren=scene.children;
     let sceneChild=null;
@@ -340,4 +359,143 @@ function getSceneChild(curSelectedObj){
     }
     return sceneChild;
 }
+//列表删除当前选择的物体
+function updateCrashableObjs(){
+    crashableObjs=[];
+    let objs=[...selectableObjs];
+    let ind =objs.indexOf(transCtrl2.object);
+    if(ind!=-1){
+        objs.splice(ind,1);
+    }
+    findChild(objs);
+    function findChild(objs){
+        objs.forEach((ele)=>{
+            if(ele.children.length){
+                findChild(ele.children);
+            }else{
+                //计算其box 边界
+                ele.box=getBox3(ele);
+                crashableObjs.push(ele);
+            }
+        })
+    }
+    console.log('crashableObjs',crashableObjs);
+}
+//检测碰撞
+function checkCrash(){
+    //解析crashObjs 进行位移
+    let selectedObj=transCtrl2.object;
+    let axis=transCtrl2.axis;
+    let crashObjs=getCrashObjs(axis);
+    //console.log('crashObjs',crashObjs);
+    if(axis.includes('x')){
+        let offset=getOffsetDist(crashObjs,'r1l2','l1r2');
+        if(offset){
+            console.log('offset',offset);
+            //selectedObj.translateX(offset);
+            //transCtrl2.mouseSubObj.x-=offset;
+            
+        }
+    }
+    if(axis.includes('y')){
+        let offset=getOffsetDist(crashObjs,'t1b2','b1t2');
+        if(offset){selectedObj.translateY(offset);}
+    }
+    if(axis.includes('z')){
+        let offset=getOffsetDist(crashObjs,'f1c2','c1f2');
+        if(offset){selectedObj.translateZ(offset);}
+    }
+}
+function getOffsetDist(crashObjs,r1l2,l1r2){
+    let ox=null;
+    let o1=crashObjs[r1l2][0];
+    let o2=crashObjs[l1r2][0];
+    //console.log('o1',o1);
+    //console.log('o2',o2);
+    if(o1!=undefined&&o2!=undefined){
+        if(Math.abs(o1.distance)>Math.abs(o2.distance)){
+            ox=o2.distance;
+        }else{
+            ox=o1.distance;
+        }
+    }else if(o1!=undefined){
+        ox=o1.distance;
+    }else if(o2!=undefined){
+        ox=o2.distance;
+    }
+    return ox;
+}
+function getCrashObjs(axis){
+    let selectedObj=transCtrl2.object;
+    selectedObj.box=getBox3(selectedObj);
+    let {min,max}=selectedObj.box;
+    let [l1,b1,c1,r1,t1,f1]=[min.x,min.y,min.z,max.x,max.y,max.z];
+    //console.log(l1,b1,c1,r1,t1,f1);
+    //建立碰撞信息对象
+    let crashObjs={
+        r1l2:[],
+        l1r2:[],
+        t1b2:[],
+        b1t2:[],
+        f1c2:[],
+        c1f2:[],
+    }
+    //先判断x 轴
+    crashableObjs.forEach((ele,ind)=>{
+        let {min,max}=ele.box;
+        let [l2,b2,c2,r2,t2,f2]=[min.x,min.y,min.z,max.x,max.y,max.z];
+        let bt=t1<t2&&t1>b2 || b1<t2&&b1>b2||t2<t1&&t2>b1 || b2<t1&&b2>b1;
+        let cf=f1<f2&&f1>c2 || c1<f2&&c1>c2||f2<f1&&f2>c1 || c2<f1&&c2>c1;
+        let lr=l1<r2&&l1>l2 || r1<r2&&r1>l2||l2<r1&&l2>l1 || r2<r1&&r2>l1;
+
+        let r1l2Dist= l2-r1;
+        let l1r2Dist= r2-l1;
+        let t1b2Dist= b2-t1;
+        let b1t2Dist= t2-b1;
+        let f1c2Dist= c2-f1;
+        let c1f2Dist= f2-c1;
+        if(axis.includes('x')){
+            //r 面
+            crashObjAdd(crashObjs['r1l2'],ele,ind,r1l2Dist,bt,cf,suction);
+            //l 面
+            crashObjAdd(crashObjs['l1r2'],ele,ind,l1r2Dist,bt,cf,suction);
+        }
+        if(axis.includes('y')){
+            //t 面
+            crashObjAdd(crashObjs['t1b2'],ele,ind,t1b2Dist,lr,cf,suction);
+            //b 面
+            crashObjAdd(crashObjs['b1t2'],ele,ind,b1t2Dist,lr,cf,suction);
+        }
+        if(axis.includes('z')){
+            //f 面
+            crashObjAdd(crashObjs['f1c2'],ele,ind,f1c2Dist,lr,bt,suction);
+            //c 面
+            crashObjAdd(crashObjs['c1f2'],ele,ind,c1f2Dist,lr,bt,suction);
+        }
+    })
+    //console.log('crashObjs',crashObjs);
+    return crashObjs;
+}
+function crashObjAdd(r1l2,ele,ind,dist,bt,cf,suction){
+    let distAbs=Math.abs(dist);
+    if( (distAbs<suction)&&bt&&cf){
+        let obj={object:ele,distance:dist};
+        let len=r1l2.length;
+        if(len){
+            if(Math.abs(r1l2[len-1].distance)>distAbs){
+                r1l2.unshift(obj);
+            }else{
+                r1l2.push(obj);
+            }
+        }else{
+            r1l2[0]=obj;
+        }
+    }
+}
+function getBox3(object){
+    let box3=new Box3();
+    box3.setFromObject(object);
+    return box3;
+}
+
 

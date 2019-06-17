@@ -74,6 +74,12 @@ export default class TransformControls2 extends Group{
         this.visible=false;
         //视图
         this.view='p';
+        //轴的包围盒
+        this.boundAxis={
+            translate:[],
+            scale:[],
+            rotate:[],
+        }
         //事件列表
         this.events={
             //轴是否被激活。可解决orbitControls 拖拽时遇到的冲突
@@ -112,9 +118,13 @@ export default class TransformControls2 extends Group{
     }
     mouseupFn(event){
         if(this.axis){
+            //只要选择了轴，在鼠标抬起时
+            //取消轴选择
             this.unactAxis();
             this.axis=null;
+            //可拖拽
             this.events['dragging-changed']({value:false});
+            //需渲染
             this.events['change']();
         }
     }
@@ -122,6 +132,8 @@ export default class TransformControls2 extends Group{
         if(this.axis){
             this.setScalar();
             this.moveObj(event);
+            //需渲染
+            this.events['change']();
         }
         if(this.hoverEnable&&!this.axis){
             this.setHoverAxis(event);
@@ -139,7 +151,7 @@ export default class TransformControls2 extends Group{
                 change=true;
             }
             //▷ 在操作轴里，获取选择对象
-            let curSelected=this.getIntersectObjectInTransform(event);
+            let curSelected=this.getIntersectObject(event);
             if(curSelected){
                 //选择了操作轴
                 //根据底部子级，获取其对应的指定集合里的元素
@@ -170,7 +182,7 @@ export default class TransformControls2 extends Group{
     }
     //设置划上的轴
     setHoverAxis(event){
-        let curSelected=this.getIntersectObjectInTransform(event);
+        let curSelected=this.getIntersectObject(event);
         if(curSelected){
             let curHoverAxis=curSelected.object.name[0];
             if(this.hoverAxis===curHoverAxis){
@@ -179,11 +191,14 @@ export default class TransformControls2 extends Group{
                 this.unactHoverAxis();
                 this.hoverAxis=curHoverAxis;
                 this.actAxis(this.hoverAxis);
+
+                //需渲染
                 this.events['change']();
             }
-
         }else{
             this.unactHoverAxis();
+            //需渲染
+            this.events['change']();
         }
     }
     unactHoverAxis(){
@@ -193,10 +208,7 @@ export default class TransformControls2 extends Group{
             this.hoverAxis=null;
         }
     }
-    getIntersectObjectInTransform(event){
-        let pickerChildren=this.getObjectByName(this.mode).children;
-        return this.getIntersectObject(event,pickerChildren);
-    }
+
     //移动物体
     moveObj(event){
         //视图点
@@ -237,9 +249,7 @@ export default class TransformControls2 extends Group{
         let axis=this.axis;
         let plane=null;
         if((axis==='x'||axis==='z'||axis==='xz')&&this.view==='p'){
-            console.log('ddddd',this.mouseSubObj.y);
             //只有操作特定的轴和视图才如此
-
             plane=new Plane(new Vector3(0,1,0));
             let y=this.mouseSubObj.y+this.object.position.y;
             plane.translate(new Vector3(0,y,0));
@@ -269,7 +279,6 @@ export default class TransformControls2 extends Group{
         }else{
             console.log('TansformControls 没有此事件');
         }
-
     }
     //激活选择的轴
     actAxis(axiss=this.axis){
@@ -313,11 +322,11 @@ export default class TransformControls2 extends Group{
         return parent;
     }
     //获取选择的物体
-    getIntersectObject(event,objects){
+    getIntersectObject(event){
         let pointer=this.getPointer( event,this.domElement);
         //获取射线
         this.raycaster.setFromCamera( pointer, this.camera );
-        let intersects = this.raycaster.intersectObjects( objects,true);
+        let intersects = this.raycaster.intersectObjects( this.boundAxis[this.mode],true);
         return intersects[0];
     }
     //获取鼠标在屏幕上的点
@@ -368,6 +377,9 @@ export default class TransformControls2 extends Group{
             fog: false
         });
 
+        let matBound=gizmoMaterial.clone();
+        matBound.opacity=0;
+
         let matRed = gizmoMaterial.clone();
         matRed.color.set( this.axisColor.x );
 
@@ -381,17 +393,19 @@ export default class TransformControls2 extends Group{
         matWhite.color.set( this.axisColor.xyz );
 
         /*移动*/
+        /*移动轴*/
+        //中心盒子
         let box=new BoxBufferGeometry(.1,.1,.1);
+        //轴
         let cylinder=new CylinderBufferGeometry(0.04, 0.04, 1, 3, 1, false);
         let m = new Matrix4();
         m.makeTranslation(0,.55,0);
         m.applyToBufferAttribute(cylinder.attributes.position);
+        //箭头
         let arrow = new CylinderBufferGeometry( 0, 0.06, 0.3, 6, 1, false);
         m = new Matrix4();
         m.makeTranslation(0,1.2,0);
         m.applyToBufferAttribute(arrow.attributes.position);
-        
-        
 
         let translateLineY=new Mesh( cylinder, matBlue );
         let translateArrowY=new Mesh( arrow, matBlue );
@@ -442,7 +456,45 @@ export default class TransformControls2 extends Group{
         PickerTranslate.add(translateXYZ);
         PickerTranslate.visible=false;
 
+        /*移动包围盒*/
+        let transBoundBox=new BoxBufferGeometry(.15,1.3,.15);
+        m = new Matrix4();
+        m.makeTranslation(0,.75,0);
+        m.applyToBufferAttribute(transBoundBox.attributes.position);
+
+        let transBoundY=new Mesh(transBoundBox,matBound);
+        transBoundY.name='y-transBound';
+        this.boundAxis.translate.push(transBoundY);
+
+        let transBoundX=transBoundY.clone();
+        transBoundX.name='x-transBound';
+        transBoundX.material=matBound;
+        transBoundX.rotateZ(-Math.PI/2);
+        this.boundAxis.translate.push(transBoundX);
+
+
+        let transBoundZ=transBoundY.clone();
+        transBoundZ.name='z-transBound';
+        transBoundZ.material=matBound;
+        transBoundZ.rotateX(Math.PI/2);
+        this.boundAxis.translate.push(transBoundZ);
+
+        PickerTranslate.add(transBoundY);
+        PickerTranslate.add(transBoundX);
+        PickerTranslate.add(transBoundZ);
+
         this.add(PickerTranslate);
+
+        /*旋转*/
+        //...
+
+        /*缩放*/
+        //...
+
+
+
+
+
     }
     setMode(){
 

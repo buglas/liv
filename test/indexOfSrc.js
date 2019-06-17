@@ -435,7 +435,6 @@ function updateCrashableObjs(){
         })
     }
     console.log('crashableObjs',crashableObjs);
-
 }
 //检测碰撞
 function checkCrash(){
