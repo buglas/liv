@@ -97,9 +97,9 @@ let view='p';
 //排除当前操作对象之外的其它对象
 let ignoreObjs=[];
 //可以被选择的对象集合
-let selectableObjs=[];
+let selectableFurns=[];
 //可以被当前选择对象检测的对象集合
-let crashableObjs=[];
+let crashableMeshs=[];
 //点击时间 
 let clickTime=null;
 //吸力
@@ -116,7 +116,7 @@ rec.appendChild(domElement);
 let scene=new Scene();
 
 let camera=new PerspectiveCamera(45,innerWidth/innerHeight,0.1,1000);
-camera.position.set(-.36, 1.2, 2);
+camera.position.set(1, 1.2, 2);
 camera.lookAt(scene.position);
 scene.add(camera);
 ignore(camera);
@@ -230,13 +230,13 @@ function mousemoveFn(){
         checkCrash();
     }
 }
-function mousedownFn(){
+function mousedownFn(event){
     updateSelectableObjs();
     if (transCtrl2.axis){
         return;
     }
     //选择对象
-    let curSelectedObj=transCtrl2.getIntersectObject(event,selectableObjs);
+    let curSelectedObj=transCtrl2.getIntersectObject(event,selectableFurns);
     if(curSelectedObj){
         //选择到了对象
         console.log('选择到了对象');
@@ -244,8 +244,6 @@ function mousedownFn(){
         //注册拖拽对象，就像crt 家具时那样
         orbitControls.enabled =false;
 
-        //设置偏移距离
-        transCtrl2.mouseSubObj=curSelectedObj.point.sub(sceneChild.position);
         //选择对象的差异判断
         let transObj=transCtrl2.object;
         if(transObj){
@@ -262,6 +260,9 @@ function mousedownFn(){
         }
         //设置拖拽轴
         setDragAxisByView();
+        //设置鼠标和相关物体的偏移距离
+        transCtrl2.setMouseSubSmth(event);
+
 
         //设置可碰撞列表,将当前选择的对象排除
         //updateCrashableObjs();
@@ -291,13 +292,16 @@ function crtDiTai(){
     //建立地台
     let diTai=new DiTai(.6,.03,.322,Mats.huTao,Mats.lvMoSha);
     diTai.visible=false;
-    let center=getObjCenter(diTai);
-    let offsetDist=center.sub(diTai.position);
-    transCtrl2.mouseSubObj=offsetDist;
+
     scene.add(diTai);
     transCtrl2.attach(diTai);
     //设置transCtrl 的拖拽轴
     setDragAxisByView();
+
+    let point=transCtrl2.getObjectCenter();
+    transCtrl2.mouseSubObj=transCtrl2.getMouseSubObj(point);
+    transCtrl2.mouseSubCenter=transCtrl2.getMouseSubCenter(point);
+
     if(transCtrl2.view==='p'){
         diTai.visible=false;
         transCtrl2.visible=false;
@@ -328,19 +332,12 @@ function setDragAxisByView(){
 }
 //更新可选对象的集合
 function updateSelectableObjs(){
-    selectableObjs=[];
+    selectableFurns=[];
     scene.children.forEach((ele)=>{
         if(!ignoreObjs.includes(ele)){
-            selectableObjs.push(ele)
+            selectableFurns.push(ele)
         }
     })
-}
-//获取对象的中心点
-function getObjCenter(object){
-    let box3=getBox3(object);
-    let center=new THREE.Vector3();
-    center=box3.getCenter(center);
-    return center;
 }
 
 //获取场景之下的一级子物体
@@ -361,8 +358,8 @@ function getSceneChild(curSelectedObj){
 }
 //列表删除当前选择的物体
 function updateCrashableObjs(){
-    crashableObjs=[];
-    let objs=[...selectableObjs];
+    crashableMeshs=[];
+    let objs=[...selectableFurns];
     let ind =objs.indexOf(transCtrl2.object);
     if(ind!=-1){
         objs.splice(ind,1);
@@ -375,43 +372,66 @@ function updateCrashableObjs(){
             }else{
                 //计算其box 边界
                 ele.box=getBox3(ele);
-                crashableObjs.push(ele);
+                crashableMeshs.push(ele);
             }
         })
     }
-    console.log('crashableObjs',crashableObjs);
+    console.log('crashableMeshs',crashableMeshs);
 }
 //检测碰撞
 function checkCrash(){
-    //解析crashObjs 进行位移
+    //当前选择对象
     let selectedObj=transCtrl2.object;
+    //移动轴
     let axis=transCtrl2.axis;
+    //发生碰撞的物体集合
     let crashObjs=getCrashObjs(axis);
-    //console.log('crashObjs',crashObjs);
+    //分离
+    let sever=false;
+    //边界盒子的中心位置，以其为基准,定位物体位置
+    let dummyCenter=new Vector3();
+    dummyCenter=transCtrl2.dummyBound.box.getCenter(dummyCenter);
+    //控制器位置减物体位置
+    let transSubObj=transCtrl2.transSubObj.clone();
+    //物体的虚拟原始位置，不受吸附影响
+    let dummyPos=dummyCenter.sub(transCtrl2.centerSubObj);
+    //吸附偏移后的物体位置
+    let newObjPos=dummyPos.clone();
     if(axis.includes('x')){
+        //获取偏移距离
         let offset=getOffsetDist(crashObjs,'r1l2','l1r2');
         if(offset){
-            console.log('offset',offset);
-            //selectedObj.translateX(offset);
-            //transCtrl2.mouseSubObj.x-=offset;
-            
+            sever=true;
+            //实际物体的吸附后的位置
+            newObjPos.x=dummyPos.x+offset;
         }
     }
     if(axis.includes('y')){
         let offset=getOffsetDist(crashObjs,'t1b2','b1t2');
-        if(offset){selectedObj.translateY(offset);}
+        if(offset){
+            sever=true;
+            newObjPos.y=dummyPos.y+offset;
+        }
     }
     if(axis.includes('z')){
         let offset=getOffsetDist(crashObjs,'f1c2','c1f2');
-        if(offset){selectedObj.translateZ(offset);}
+        if(offset){
+            sever=true;
+            newObjPos.z=dummyPos.z+offset;
+        }
     }
+    //实际物体位
+    selectedObj.position.copy(newObjPos);
+    //控制器位
+    transCtrl2.transform.position.copy(newObjPos.clone().add(transCtrl2.transSubObj))
+    //分离与否
+    transCtrl2.sever=sever;
 }
+//获取某一个轴的偏移距离
 function getOffsetDist(crashObjs,r1l2,l1r2){
     let ox=null;
     let o1=crashObjs[r1l2][0];
     let o2=crashObjs[l1r2][0];
-    //console.log('o1',o1);
-    //console.log('o2',o2);
     if(o1!=undefined&&o2!=undefined){
         if(Math.abs(o1.distance)>Math.abs(o2.distance)){
             ox=o2.distance;
@@ -426,9 +446,8 @@ function getOffsetDist(crashObjs,r1l2,l1r2){
     return ox;
 }
 function getCrashObjs(axis){
-    let selectedObj=transCtrl2.object;
-    selectedObj.box=getBox3(selectedObj);
-    let {min,max}=selectedObj.box;
+    //基于边界盒子，做碰撞检测
+    let {min,max}=transCtrl2.dummyBound.box;
     let [l1,b1,c1,r1,t1,f1]=[min.x,min.y,min.z,max.x,max.y,max.z];
     //console.log(l1,b1,c1,r1,t1,f1);
     //建立碰撞信息对象
@@ -441,7 +460,7 @@ function getCrashObjs(axis){
         c1f2:[],
     }
     //先判断x 轴
-    crashableObjs.forEach((ele,ind)=>{
+    crashableMeshs.forEach((ele,ind)=>{
         let {min,max}=ele.box;
         let [l2,b2,c2,r2,t2,f2]=[min.x,min.y,min.z,max.x,max.y,max.z];
         let bt=t1<t2&&t1>b2 || b1<t2&&b1>b2||t2<t1&&t2>b1 || b2<t1&&b2>b1;
@@ -473,7 +492,6 @@ function getCrashObjs(axis){
             crashObjAdd(crashObjs['c1f2'],ele,ind,c1f2Dist,lr,bt,suction);
         }
     })
-    //console.log('crashObjs',crashObjs);
     return crashObjs;
 }
 function crashObjAdd(r1l2,ele,ind,dist,bt,cf,suction){
