@@ -448,8 +448,8 @@ function getOffsetDist(crashObjs,r1l2,l1r2){
 function getCrashObjs(axis){
     //基于边界盒子，做碰撞检测
     let {min,max}=transCtrl2.dummyBound.box;
+    //六个面的位置
     let [l1,b1,c1,r1,t1,f1]=[min.x,min.y,min.z,max.x,max.y,max.z];
-    //console.log(l1,b1,c1,r1,t1,f1);
     //建立碰撞信息对象
     let crashObjs={
         r1l2:[],
@@ -461,51 +461,70 @@ function getCrashObjs(axis){
     }
     //先判断x 轴
     crashableMeshs.forEach((ele,ind)=>{
+        //根据极点获取六个面的位置
         let {min,max}=ele.box;
         let [l2,b2,c2,r2,t2,f2]=[min.x,min.y,min.z,max.x,max.y,max.z];
-        let bt=t1<t2&&t1>b2 || b1<t2&&b1>b2||t2<t1&&t2>b1 || b2<t1&&b2>b1;
-        let cf=f1<f2&&f1>c2 || c1<f2&&c1>c2||f2<f1&&f2>c1 || c2<f1&&c2>c1;
-        let lr=l1<r2&&l1>l2 || r1<r2&&r1>l2||l2<r1&&l2>l1 || r2<r1&&r2>l1;
-
+        //两个边界盒子在三个方向的交叉判断
+        //上下
+        let bt=t1<t2&&t1>b2 || b1<t2&&b1>b2||t2<t1&&t2>b1;
+        //前后
+        let cf=f1<f2&&f1>c2 || c1<f2&&c1>c2||f2<f1&&f2>c1;
+        //左右
+        let lr=l1<r2&&l1>l2 || r1<r2&&r1>l2||l2<r1&&l2>l1;
+        //边界盒子六个反normal 面的距离
         let r1l2Dist= l2-r1;
         let l1r2Dist= r2-l1;
         let t1b2Dist= b2-t1;
         let b1t2Dist= t2-b1;
         let f1c2Dist= c2-f1;
         let c1f2Dist= f2-c1;
+        //根据拖拽轴限制吸附
         if(axis.includes('x')){
             //r 面
-            crashObjAdd(crashObjs['r1l2'],ele,ind,r1l2Dist,bt,cf,suction);
+            //数组，可碰撞元素，距离，交叉面a，交叉面b，面，面的位置，吸引力
+            crashObjAdd(crashObjs['r1l2'],ele,r1l2Dist,bt,cf,'r',r2,suction);
             //l 面
-            crashObjAdd(crashObjs['l1r2'],ele,ind,l1r2Dist,bt,cf,suction);
+            crashObjAdd(crashObjs['l1r2'],ele,l1r2Dist,bt,cf,'l',l2,suction);
         }
         if(axis.includes('y')){
             //t 面
-            crashObjAdd(crashObjs['t1b2'],ele,ind,t1b2Dist,lr,cf,suction);
+            crashObjAdd(crashObjs['t1b2'],ele,t1b2Dist,lr,cf,'t',t2,suction);
             //b 面
-            crashObjAdd(crashObjs['b1t2'],ele,ind,b1t2Dist,lr,cf,suction);
+            crashObjAdd(crashObjs['b1t2'],ele,b1t2Dist,lr,cf,'b',b2,suction);
         }
         if(axis.includes('z')){
             //f 面
-            crashObjAdd(crashObjs['f1c2'],ele,ind,f1c2Dist,lr,bt,suction);
+            crashObjAdd(crashObjs['f1c2'],ele,f1c2Dist,lr,bt,'f',f2,suction);
             //c 面
-            crashObjAdd(crashObjs['c1f2'],ele,ind,c1f2Dist,lr,bt,suction);
+            crashObjAdd(crashObjs['c1f2'],ele,c1f2Dist,lr,bt,'c',c2,suction);
         }
     })
     return crashObjs;
 }
-function crashObjAdd(r1l2,ele,ind,dist,bt,cf,suction){
+function crashObjAdd(r1l2,ele,dist,bt,cf,face,facePos,suction){
+    //绝对距离
     let distAbs=Math.abs(dist);
+    //符合碰撞条件
     if( (distAbs<suction)&&bt&&cf){
-        let obj={object:ele,distance:dist};
+        //加工碰撞数据
+        let obj=Object.assign({
+            distance:dist,
+            face:face,
+            facePos:facePos
+        },ele)
+        //数组长度
         let len=r1l2.length;
         if(len){
+            //数组不为空
+            //对比排序
             if(Math.abs(r1l2[len-1].distance)>distAbs){
                 r1l2.unshift(obj);
             }else{
                 r1l2.push(obj);
             }
         }else{
+            //数组为空
+            //直接置入
             r1l2[0]=obj;
         }
     }
