@@ -164,6 +164,12 @@ export default class TransformControls2 extends Group{
             //取消轴选择
             this.unactAxis();
             this.axis=null;
+            //设置虚拟物体位置
+            if(this.sever){
+                //若分离
+                //虚拟物体位置吻合实际物体位置
+                this.setDummyPosByObj();
+            }
             //可拖拽
             this.events['dragging-changed']({value:false});
             //需渲染
@@ -257,8 +263,8 @@ export default class TransformControls2 extends Group{
         if(focus){
             //所选物体和控制轴可见
             this.setVisibleByFocus(true);
-            //先设置边界盒子位置
-            this.setDummyPos(focus);
+            //先根据鼠标位置，设置边界盒子位置
+            this.setDummyPosByMouse(focus);
             if(this.sever){
                 //分离
                 this.dragSever(focus);
@@ -306,25 +312,6 @@ export default class TransformControls2 extends Group{
         //焦点
         let focus=new Vector3();
         return ray.intersectPlane(plane,focus);
-    }
-    //设置虚拟边界对象的Box，基于鼠标位置，鼠标减中心点和边界盒子的长宽高
-    setDummyPos(point){
-        let boxCenter=point.clone().sub(this.mouseSubCenter);
-        let dis=this.dummyBound.whd.clone().divideScalar(2);
-        let min1=boxCenter.clone().sub(dis);
-        let max1=boxCenter.clone().add(dis);
-        let box2=this.dummyBound.box;
-        let min2=box2.min;
-        let max2=box2.max;
-        let axis=this.axis;
-        for(let i=0;i<axis.length;i++){
-            let axisi=axis[i];
-            min2[axisi]=min1[axisi];
-            max2[axisi]=max1[axisi];
-        }
-        let box3=new Box3(min2,max2);
-        this.dummyBound.box=box3;
-        this.dummyBound.updateMatrixWorld();
     }
     //获取平面
     getPlane(){
@@ -436,24 +423,48 @@ export default class TransformControls2 extends Group{
         let pos=object.position.clone();
         //控制器位置
         this.transform.position.copy(center);
+        //缩放控制器
+        this.setScalar();
         //控制器位置减去物体位置
         this.transSubObj=center.clone().sub(pos);
         //物体中心位置减去物体位置
         this.centerSubObj=center.clone().sub(pos);
-        //缩放
-        this.setScalar();
 
+
+        //根据实际物体位置设置虚拟物体位置
+        this.setDummyPosByObj();
+        //存储虚拟物体的尺寸
+        let whd=new Vector3();
+        whd=this.dummyBound.box.getSize(whd);
+        this.dummyBound.whd=whd;
+        
+    }
+    //根据实际物体位置设置虚拟物体位置
+    setDummyPosByObj(){
         //建立虚拟盒子
         let box3=new Box3();
-        box3.setFromObject(object);
+        box3.setFromObject(this.object);
         box3.expandByScalar(.001);
-        let whd=new Vector3();
-        whd=box3.getSize(whd);
-        this.dummyBound.whd=whd;
         this.dummyBound.box=box3;
-
-
-
+    }
+    //设置虚拟边界对象的Box，基于鼠标位置，鼠标减中心点和边界盒子的长宽高
+    setDummyPosByMouse(point){
+        let boxCenter=point.clone().sub(this.mouseSubCenter);
+        let dis=this.dummyBound.whd.clone().divideScalar(2);
+        let min1=boxCenter.clone().sub(dis);
+        let max1=boxCenter.clone().add(dis);
+        let box2=this.dummyBound.box;
+        let min2=box2.min;
+        let max2=box2.max;
+        let axis=this.axis;
+        for(let i=0;i<axis.length;i++){
+            let axisi=axis[i];
+            min2[axisi]=min1[axisi];
+            max2[axisi]=max1[axisi];
+        }
+        let box3=new Box3(min2,max2);
+        this.dummyBound.box=box3;
+        this.dummyBound.updateMatrixWorld();
     }
     //获取物体中心
     getObjectCenter(object=this.object){
@@ -461,16 +472,6 @@ export default class TransformControls2 extends Group{
         box3.setFromObject(object);
         let center=new Vector3();
         return box3.getCenter(center);
-    }
-    //建立虚拟盒子
-    setDummyPosBoxByObj(object){
-        let box3=new Box3();
-        box3.setFromObject(object);
-        this.dummyBound.box=box3;
-
-        this.dummyBound.translateX(1);
-        this.dummyBound.updateMatrixWorld();
-
     }
     //分离
     detach(){
@@ -571,10 +572,12 @@ export default class TransformControls2 extends Group{
 
         let PickerTranslate=new Group();
         PickerTranslate.name='translate';
-        PickerTranslate.add(translateY);
+
+        PickerTranslate.add(translateXYZ);
         PickerTranslate.add(translateX);
         PickerTranslate.add(translateZ);
-        PickerTranslate.add(translateXYZ);
+        PickerTranslate.add(translateY);
+
         PickerTranslate.visible=false;
 
         /*移动包围盒*/
@@ -629,9 +632,12 @@ export default class TransformControls2 extends Group{
     }
 
     /*与轴无关的东东*/
-    machine(furn){
+    //加工数据
+    machine(furn,crashable=true){
         //先不考虑重复
         this.selectableFurns.push(furn);
+        if(!crashable){return}
+        let _this=this;
         findChild(furn);
         function findChild(obj){
             if(obj.children.length){
@@ -640,8 +646,8 @@ export default class TransformControls2 extends Group{
                 })
             }else{
                 //计算其box 边界
-                this.crashableMeshs.push({
-                    box3:this.getBox3(obj),
+                _this.crashableMeshs.push({
+                    box:_this.getBox(obj),
                     id:obj.id,
                     furnId:furn.id
                 })
@@ -649,7 +655,7 @@ export default class TransformControls2 extends Group{
         }
     }
     //获取边界盒子
-    getBox3(object){
+    getBox(object){
         let box3=new Box3();
         box3.setFromObject(object);
         return box3;

@@ -7,6 +7,7 @@ import Stats  from '@/lib/Stats'
 import DiTai from '@/furns/DiTai'
 import TransformControls2 from '@/lib/TransformControls2'
 import Mats from '@/com/Mats'
+import Crash from '@/com/Crash'
 
 
 const {
@@ -133,7 +134,6 @@ let transCtrl2=new TransformControls2(camera,domElement,orbitControls);
 scene.add(transCtrl2);
 ignore(transCtrl2);
 
-
 let boxGeo = new  BoxBufferGeometry(.4, .2,.8);
 let m = new Matrix4();
 m.makeTranslation(0.2,.1,.4);
@@ -146,7 +146,7 @@ let boxMesh = new  Mesh(boxGeo, boxMat);
 boxMesh.name='boxMesh';
 scene.add(boxMesh);
 transCtrl2.attach(boxMesh);
-
+transCtrl2.machine(boxMesh,false);
 
 //环境光   环境光颜色RGB成分分别和物体材质颜色RGB成分分别相乘
 let ambient = new  AmbientLight(0x444444);
@@ -180,7 +180,6 @@ axesHelper.translateY(.001);
 scene.add(axesHelper);
 ignore(axesHelper);
 
-updateSelectableObjs();
 render();
 function render() {
     stats.begin();
@@ -194,7 +193,6 @@ const gui=new GUI();
 let furnsGui=gui.addFolder('分体厅柜');
 furnsGui.add(fttg,'crtDiTai','地台');
 furnsGui.open();
-
 
 //此事件实际上可以被覆盖掉的
 //transCtrl2.addEventListener( 'change', render );
@@ -231,12 +229,9 @@ function mousemoveFn(){
     }
 }
 function mousedownFn(event){
-    updateSelectableObjs();
-    if (transCtrl2.axis){
-        return;
-    }
+    if (transCtrl2.axis){return;}
     //选择对象
-    let curSelectedObj=transCtrl2.getIntersectObject(event,selectableFurns);
+    let curSelectedObj=transCtrl2.getIntersectObject(event,transCtrl2.selectableFurns);
     if(curSelectedObj){
         //选择到了对象
         console.log('选择到了对象');
@@ -250,22 +245,18 @@ function mousedownFn(event){
             if(sceneChild!==transObj){
                 transCtrl2.detach(transObj);
                 transCtrl2.attach(sceneChild);
-                updateCrashableObjs();
+                //updateCrashableObjs();
                 render();
             }
         }else{
             transCtrl2.attach(sceneChild);
-            updateCrashableObjs();
+            //updateCrashableObjs();
             render();
         }
         //设置拖拽轴
         setDragAxisByView();
         //设置鼠标和相关物体的偏移距离
         transCtrl2.setMouseSubSmth(event);
-
-
-        //设置可碰撞列表,将当前选择的对象排除
-        //updateCrashableObjs();
     }else{
         //啥也没选择到
         console.log('啥也没选择到');
@@ -281,7 +272,6 @@ function ignore(obj){
         ignoreObjs.push(obj);
     }
 }
-
 //建立地台
 function crtDiTai(){
     //取消当前选择
@@ -292,9 +282,9 @@ function crtDiTai(){
     //建立地台
     let diTai=new DiTai(.6,.03,.322,Mats.huTao,Mats.lvMoSha);
     diTai.visible=false;
-
     scene.add(diTai);
     transCtrl2.attach(diTai);
+    transCtrl2.machine(diTai,false);
     //设置transCtrl 的拖拽轴
     setDragAxisByView();
 
@@ -307,12 +297,8 @@ function crtDiTai(){
         transCtrl2.visible=false;
     }
     //设置可碰撞列表,将当前选择的对象排除
-    updateCrashableObjs();
-
-
+    //updateCrashableObjs();
 }
-
-
 //根据view 设置拖拽轴
 function setDragAxisByView(){
     switch (transCtrl2.view){
@@ -330,16 +316,6 @@ function setDragAxisByView(){
             break;
     }
 }
-//更新可选对象的集合
-function updateSelectableObjs(){
-    selectableFurns=[];
-    scene.children.forEach((ele)=>{
-        if(!ignoreObjs.includes(ele)){
-            selectableFurns.push(ele)
-        }
-    })
-}
-
 //获取场景之下的一级子物体
 function getSceneChild(curSelectedObj){
     let sceneChildren=scene.children;
@@ -356,183 +332,27 @@ function getSceneChild(curSelectedObj){
     }
     return sceneChild;
 }
-//列表删除当前选择的物体
-function updateCrashableObjs(){
-    crashableMeshs=[];
-    let objs=[...selectableFurns];
-    let ind =objs.indexOf(transCtrl2.object);
-    if(ind!=-1){
-        objs.splice(ind,1);
-    }
-    findChild(objs);
-    function findChild(objs){
-        objs.forEach((ele)=>{
-            if(ele.children.length){
-                findChild(ele.children);
-            }else{
-                //计算其box 边界
-                ele.box=getBox3(ele);
-                crashableMeshs.push(ele);
-            }
-        })
-    }
-    console.log('crashableMeshs',crashableMeshs);
-}
+
 //检测碰撞
 function checkCrash(){
-    //当前选择对象
-    let selectedObj=transCtrl2.object;
-    //移动轴
-    let axis=transCtrl2.axis;
-    //发生碰撞的物体集合
-    let crashObjs=getCrashObjs(axis);
     //分离
     let sever=false;
-    //边界盒子的中心位置，以其为基准,定位物体位置
-    let dummyCenter=new Vector3();
-    dummyCenter=transCtrl2.dummyBound.box.getCenter(dummyCenter);
-    //控制器位置减物体位置
-    let transSubObj=transCtrl2.transSubObj.clone();
-    //物体的虚拟原始位置，不受吸附影响
-    let dummyPos=dummyCenter.sub(transCtrl2.centerSubObj);
     //吸附偏移后的物体位置
-    let newObjPos=dummyPos.clone();
-    if(axis.includes('x')){
-        //获取偏移距离
-        let offset=getOffsetDist(crashObjs,'r1l2','l1r2');
-        if(offset){
+    let newObjPos=Crash.getDragedObjPos(
+        transCtrl2,
+        function () {
             sever=true;
-            //实际物体的吸附后的位置
-            newObjPos.x=dummyPos.x+offset;
         }
-    }
-    if(axis.includes('y')){
-        let offset=getOffsetDist(crashObjs,'t1b2','b1t2');
-        if(offset){
-            sever=true;
-            newObjPos.y=dummyPos.y+offset;
-        }
-    }
-    if(axis.includes('z')){
-        let offset=getOffsetDist(crashObjs,'f1c2','c1f2');
-        if(offset){
-            sever=true;
-            newObjPos.z=dummyPos.z+offset;
-        }
-    }
-    //实际物体位
-    selectedObj.position.copy(newObjPos);
-    //控制器位
-    transCtrl2.transform.position.copy(newObjPos.clone().add(transCtrl2.transSubObj))
+    );
     //分离与否
     transCtrl2.sever=sever;
-}
-//获取某一个轴的偏移距离
-function getOffsetDist(crashObjs,r1l2,l1r2){
-    let ox=null;
-    let o1=crashObjs[r1l2][0];
-    let o2=crashObjs[l1r2][0];
-    if(o1!=undefined&&o2!=undefined){
-        if(Math.abs(o1.distance)>Math.abs(o2.distance)){
-            ox=o2.distance;
-        }else{
-            ox=o1.distance;
-        }
-    }else if(o1!=undefined){
-        ox=o1.distance;
-    }else if(o2!=undefined){
-        ox=o2.distance;
-    }
-    return ox;
-}
-function getCrashObjs(axis){
-    //基于边界盒子，做碰撞检测
-    let {min,max}=transCtrl2.dummyBound.box;
-    //六个面的位置
-    let [l1,b1,c1,r1,t1,f1]=[min.x,min.y,min.z,max.x,max.y,max.z];
-    //建立碰撞信息对象
-    let crashObjs={
-        r1l2:[],
-        l1r2:[],
-        t1b2:[],
-        b1t2:[],
-        f1c2:[],
-        c1f2:[],
-    }
-    //先判断x 轴
-    crashableMeshs.forEach((ele,ind)=>{
-        //根据极点获取六个面的位置
-        let {min,max}=ele.box;
-        let [l2,b2,c2,r2,t2,f2]=[min.x,min.y,min.z,max.x,max.y,max.z];
-        //两个边界盒子在三个方向的交叉判断
-        //上下
-        let bt=t1<t2&&t1>b2 || b1<t2&&b1>b2||t2<t1&&t2>b1;
-        //前后
-        let cf=f1<f2&&f1>c2 || c1<f2&&c1>c2||f2<f1&&f2>c1;
-        //左右
-        let lr=l1<r2&&l1>l2 || r1<r2&&r1>l2||l2<r1&&l2>l1;
-        //边界盒子六个反normal 面的距离
-        let r1l2Dist= l2-r1;
-        let l1r2Dist= r2-l1;
-        let t1b2Dist= b2-t1;
-        let b1t2Dist= t2-b1;
-        let f1c2Dist= c2-f1;
-        let c1f2Dist= f2-c1;
-        //根据拖拽轴限制吸附
-        if(axis.includes('x')){
-            //r 面
-            //数组，可碰撞元素，距离，交叉面a，交叉面b，面，面的位置，吸引力
-            crashObjAdd(crashObjs['r1l2'],ele,r1l2Dist,bt,cf,'r',r2,suction);
-            //l 面
-            crashObjAdd(crashObjs['l1r2'],ele,l1r2Dist,bt,cf,'l',l2,suction);
-        }
-        if(axis.includes('y')){
-            //t 面
-            crashObjAdd(crashObjs['t1b2'],ele,t1b2Dist,lr,cf,'t',t2,suction);
-            //b 面
-            crashObjAdd(crashObjs['b1t2'],ele,b1t2Dist,lr,cf,'b',b2,suction);
-        }
-        if(axis.includes('z')){
-            //f 面
-            crashObjAdd(crashObjs['f1c2'],ele,f1c2Dist,lr,bt,'f',f2,suction);
-            //c 面
-            crashObjAdd(crashObjs['c1f2'],ele,c1f2Dist,lr,bt,'c',c2,suction);
-        }
-    })
-    return crashObjs;
-}
-function crashObjAdd(r1l2,ele,dist,bt,cf,face,facePos,suction){
-    //绝对距离
-    let distAbs=Math.abs(dist);
-    //符合碰撞条件
-    if( (distAbs<suction)&&bt&&cf){
-        //加工碰撞数据
-        let obj=Object.assign({
-            distance:dist,
-            face:face,
-            facePos:facePos
-        },ele)
-        //数组长度
-        let len=r1l2.length;
-        if(len){
-            //数组不为空
-            //对比排序
-            if(Math.abs(r1l2[len-1].distance)>distAbs){
-                r1l2.unshift(obj);
-            }else{
-                r1l2.push(obj);
-            }
-        }else{
-            //数组为空
-            //直接置入
-            r1l2[0]=obj;
-        }
+    if(sever){
+        //实际物体位
+        transCtrl2.object.position.copy(newObjPos);
+        //控制器位
+        transCtrl2.transform.position.copy(newObjPos.add(transCtrl2.transSubObj))
     }
 }
-function getBox3(object){
-    let box3=new Box3();
-    box3.setFromObject(object);
-    return box3;
-}
+
 
 
