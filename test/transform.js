@@ -47,15 +47,15 @@ export default class TransformControls2 extends Group{
         this.hoverEnable=true;
         //鼠标点击位减去所选物体位置
         this.mouseSubObj=new Vector3();
+        //控制轴的位置减去物体的位置
+        this.transSubObj=new Vector3();
+        //物体中心减物体位置
+        this.centerSubObj=new Vector3();
         //鼠标点击位减去物体中心，以方便以鼠标为基准移动边界
         //以此边界盒子与其它对象做碰撞检测
         this.mouseSubCenter=new Vector3();
         //鼠标点击位减去控制轴的位置
         this.mouseSubTrans=new Vector3();
-        //控制轴的位置减去物体的位置
-        this.transSubObj=new Vector3();
-        //物体中心减物体位置
-        this.centerSubObj=new Vector3();
         //要显示的轴，不同视图，显示的轴不同
         //this.axisShow='xyz';
         this.showX=true;
@@ -154,8 +154,7 @@ export default class TransformControls2 extends Group{
         if(this.axis){
             //恒定控制器大小
             this.setScalar();
-            //检测碰撞
-            this.checkCrash();
+
             //移动物体
             this.moveObj(event);
 
@@ -166,7 +165,10 @@ export default class TransformControls2 extends Group{
             //做轴的划上检测
             this.setHoverAxis(event);
         }
-        
+        if(this.axis){
+            //检测碰撞
+            this.checkCrash();
+        }
 
     }
 
@@ -206,8 +208,11 @@ export default class TransformControls2 extends Group{
             //选择到了对象
             //let sceneChild=getSceneChild(curSelectedObj.object);
             //从parents中获取包含子元素selected 的元素
+            console.log('this.selectableFurns',this.selectableFurns);
+            console.log('curSelectedObj',curSelectedObj);
             let sceneChild=this.getParentInArray(curSelectedObj.object,this.selectableFurns)
 
+            console.log('sceneChild',sceneChild);
             //选择对象的差异判断
             let transObj=this.object;
             if(transObj){
@@ -303,7 +308,6 @@ export default class TransformControls2 extends Group{
         //鼠标位置减控制器位置
         this.mouseSubTrans=this.getMouseSubTrans(focus);
     }
-    
     getMouseSubObj(point,obj=this.object){
         return point.clone().sub(obj.position)
     }
@@ -579,7 +583,6 @@ export default class TransformControls2 extends Group{
     detach(){
         //可碰撞物体的载入
         this.addCrashableObj(this.object);
-        //this.mouseSubTrans=new Vector3();
         //控制轴、虚拟物体都不可见
         this.visible=false;
         //当前选择物体置空
@@ -777,13 +780,12 @@ export default class TransformControls2 extends Group{
     }
     //可碰撞物体的删除
     deleteCrashableObj(furn){
-        let arr=[];
-        this.crashableMeshs.forEach((ele,ind)=>{
-            if(ele.furnId!==furn.id){
-                arr.push(ele)
+        let crashableMeshs=this.crashableMeshs;
+        crashableMeshs.forEach((ele,ind)=>{
+            if(ele.furnId===furn.id){
+                crashableMeshs.splice(ind,1);
             }
         })
-        this.crashableMeshs=arr;
     }
     //获取边界盒子
     getBox(object){
