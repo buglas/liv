@@ -67,8 +67,8 @@ const Crash={
         //先判断x 轴
         crashableMeshs.forEach((ele,ind)=>{
             //根据极点获取六个面的位置
-            let {min,max}=ele.box;
-            let [l2,b2,c2,r2,t2,f2]=[min.x,min.y,min.z,max.x,max.y,max.z];
+            let {l,b,c,r,t,f}=ele;
+            let [l2,b2,c2,r2,t2,f2]=[l,b,c,r,t,f];
             //两个边界盒子在三个方向的交叉判断
             //上下
             let bt=t1<t2&&t1>b2 || b1<t2&&b1>b2||t2<t1&&t2>b1;

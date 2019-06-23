@@ -98,6 +98,8 @@ export default class TransformControls2 extends Group{
         this.crashableMeshs=[];
         //点击时间
         this.clickTime=null;
+        //浮动平面
+        this.plane=null;
         //事件列表
         this.events={
             //轴是否被激活。可解决orbitControls 拖拽时遇到的冲突
@@ -108,17 +110,46 @@ export default class TransformControls2 extends Group{
             'mouseover':()=>{},
             //鼠标离开控制轴
             'mouseout':()=>{},
+            //鼠标离开控制轴
+            'mouseout':()=>{},
+            //可碰撞吸附属性变化时
+            'crashable-change':()=>{},
+            //可浮动属性变化时
+            'floatable-change':()=>{},
             //虚拟物体和真实物体分离时
             //'dummy-sever':()=>{}
         }
+        //物体初始位置，参与计算平面位置和恢复
+        this.objInitPos=0;
+        //控制器位置
+        this.transInitPos=0;
+        //物体位置到其六个边界的位置
+        this.objSubBound={};
+        //平面方向，基于view
+        this.planeDir={p:1,t:1,r:1,f:1,l:-1,b:-1,c:-1};
+        //平面位置,基于view
+        this.planeAxis={p:'y',t:'y',r:'x',f:'z',l:'x',b:'y',c:'z'};
+        //浮动对象
+        this.floatObj=null;
+        //可碰撞吸附
+        this.crashable=true;
+        //可浮动
+        this.floatable=true;
+
         //初始化
         this.init();
     }
     init(){
+        //初始化平面
+        this.setInitPlane();
         //建立虚拟物体
         this.crtDummy();
         //建立操作轴，并先将其隐藏
         this.crtTransform();
+        
+        console.log('this.crashable',this.crashable);
+
+
         //注册轴与物体点击事件，试试自定义事件,将点击对象赋予object
         let _this=this;
         this.domElement.addEventListener('mousedown',function (event) {
@@ -133,15 +164,34 @@ export default class TransformControls2 extends Group{
             if(!_this.enable){return}
             _this.mousemoveFn(event);
         })
-        //捕捉camera 的change 事件
+        window.addEventListener('keydown',function (event) {
+            switch (event.key){
+                case 'c':
+                    //吸附开关
+                    _this.toggleCrashable();
+                    break;
+                case 'f':
+                    //浮动开关
+                    _this.toggleFloatable();
+                    break;
+            }
+        })
+        //设置缩放
         this.setScalar();
 
     }
     mousedownFn(event){
-        //鼠标点击在轴上
-        this.mousedownOfAxis(event);
-        //鼠标拖拽物体
-        this.mousedownOfFurn(event);
+        console.log(event.buttons);
+        switch (event.buttons){
+            case 1:
+                //鼠标左击
+                //鼠标点击在轴上
+                this.mousedownOfAxis(event);
+                //鼠标拖拽物体
+                this.mousedownOfFurn(event);
+                break
+        }
+
     }
     mouseupFn(event){
         //拖拽的时候
@@ -201,6 +251,7 @@ export default class TransformControls2 extends Group{
         //选择对象
         let curSelectedObj=this.getIntersectObject(event,this.selectableFurns);
         if(curSelectedObj){
+            //存在选择的物体
             //启动拖拽事件
             this.events['dragging-changed']({value:true});
             //选择到了对象
@@ -211,12 +262,19 @@ export default class TransformControls2 extends Group{
             //选择对象的差异判断
             let transObj=this.object;
             if(transObj){
-                if(sceneChild!==transObj){
+                //object物体已存在
+                //判断之前选择物体和现在选择物体是否是同一个
+                if(sceneChild===transObj){
+                    //是同一个，更新与物体绑定的变换属性
+                    this.updateTransformAttrByObj();
+                }else{
+                    //不是同一个
                     this.detach(transObj);
                     this.attach(sceneChild);
                     //render();
                     //需渲染
                     this.events['change']();
+
                 }
             }else{
                 this.attach(sceneChild);
@@ -224,6 +282,9 @@ export default class TransformControls2 extends Group{
                 //需渲染
                 this.events['change']();
             }
+
+
+
             //设置拖拽轴
             this.setDragAxisByView();
             //设置鼠标和相关物体的偏移距离
@@ -242,11 +303,14 @@ export default class TransformControls2 extends Group{
             this.unactAxis();
             this.axis=null;
             //设置虚拟物体位置
-            if(this.sever){
+            //虚拟物体位置吻合实际物体位置
+            //以应对吸附和浮动的情况
+            this.setDummyPosByObj();
+            /*if(this.sever){
                 //若分离
                 //虚拟物体位置吻合实际物体位置
                 this.setDummyPosByObj();
-            }
+            }*/
             //可拖拽
             this.events['dragging-changed']({value:false});
             //需渲染
@@ -272,6 +336,7 @@ export default class TransformControls2 extends Group{
     }
     //检测碰撞
     checkCrash(){
+        if(!this.crashable){return}
         //分离
         let sever=false;
         //吸附偏移后的物体位置
@@ -284,14 +349,13 @@ export default class TransformControls2 extends Group{
         //分离与否
         this.sever=sever;
         if(sever){
-            //实际物体位
-            this.object.position.copy(newObjPos);
-            //控制器位
-            this.transform.position.copy(newObjPos.add(this.transSubObj))
+            for(let i=0;i<this.axis.length;i++){
+                let axis=this.axis[i];
+                this.object.position[axis]=newObjPos[axis];
+                this.transform.position[axis]=newObjPos[axis]+this.transSubObj[axis];
+            }
         }
     }
-
-
 
     //设置偏移
     setMouseSubSmth(event){
@@ -303,7 +367,6 @@ export default class TransformControls2 extends Group{
         //鼠标位置减控制器位置
         this.mouseSubTrans=this.getMouseSubTrans(focus);
     }
-    
     getMouseSubObj(point,obj=this.object){
         return point.clone().sub(obj.position)
     }
@@ -357,8 +420,13 @@ export default class TransformControls2 extends Group{
     }
     //移动物体
     moveObj(event){
+        //设置射线，根据相机和鼠标位
+        this.setRaycaster(event);
+        //根据浮动设置物体位置
+        this.setObjFloatPos()
         //获取鼠标在平面上的焦点
-        let focus=this.getFocus(event);
+        let focus=this.getFocus();
+
         //若鼠标点击的位置在视平线以上，相机到鼠标的射线是不会和地面产生焦点的
         if(focus){
             //所选物体和控制轴可见
@@ -374,10 +442,63 @@ export default class TransformControls2 extends Group{
         }
         this.events['change']();
     }
-    //分离的拖拽物体和控制器
-    dragSever(focus){
+    //根据浮动设置物体位置
+    setObjFloatPos(){
+        if (!this.floatable){return}
+        //根据射线寻找鼠标滑过的浮动面
+        let planeAxis=this.planeAxis[this.view];
+        let floatObj=this.findFloatObj();
+        if(floatObj!==this.floatObj){
+            let objPos,transPos;
+            if(floatObj===null){
+                //默认水平位置为0
+                objPos=this.objSubBound[this.view];
+            }else{
+                objPos=floatObj[this.view]+this.objSubBound[this.view];
 
+            }
+            this.object.position[planeAxis]=objPos;
+            this.transform.position[planeAxis]=objPos+this.transSubObj[planeAxis];
+            this.floatObj=floatObj;
+        }
     }
+    //根据射线寻找鼠标滑过的浮动面
+    findFloatObj(){
+        let ray= this.raycaster.ray;
+        let floatObj=null;
+        //遍历可碰撞物体的浮动三角
+        for(let obj of this.crashableMeshs){
+            let find=false;
+            for(let triangle of obj.floatFaces[this.view]){
+                let point=new Vector3();
+                point=ray.intersectTriangle(triangle[0],triangle[1],triangle[2],true,point)
+                if(point){
+                    find=true;
+                    break;
+                }
+            }
+            if(find){
+                if(floatObj){
+                    let bool=floatObj[this.view]>obj[this.view];
+                    if(['p','t','r','f'].includes(this.view)){
+                        if (!bool){
+                            //取大值
+                            floatObj=obj;
+                        }
+                    }else{
+                        if (bool){
+                            //取小值
+                            floatObj=obj;
+                        }
+                    }
+                }else{
+                    floatObj=obj;
+                }
+            }
+        }
+        return floatObj;
+    }
+
     //不分离的拖拽物体和控制器
     dragUnsever(focus){
         //基于鼠标获取物体位置
@@ -398,29 +519,24 @@ export default class TransformControls2 extends Group{
         this.visible=bool;
     }
     //获取鼠标在平面上的焦点
-    getFocus(event){
+    getFocus(){
+        console.log('this.plane',this.plane);
+        console.log('this.raycaster.ray',this.raycaster.ray);
+        let vec3=new Vector3();
+        return this.raycaster.ray.intersectPlane(this.plane,vec3);
+    }
+    setRaycaster(event){
         //视图点
         let pointer=this.getPointer( event,this.domElement);
         //获取射线
         this.raycaster.setFromCamera( pointer, this.camera );
-        let ray= this.raycaster.ray;
-        //投射平面
-        let plane=this.getPlane();
-        //焦点
-        let focus=new Vector3();
-        return ray.intersectPlane(plane,focus);
     }
-    //获取平面
-    getPlane(){
+    //获取初始平面
+    setInitPlane(){
         //平面的朝向
         let axis=this.axis;
         let plane=null;
-        if((axis==='x'||axis==='z'||axis==='xz')&&this.view==='p'){
-            //只有操作特定的轴和视图才如此
-            plane=new Plane(new Vector3(0,1,0));
-            let y=this.mouseSubObj.y+this.object.position.y;
-            plane.translate(new Vector3(0,y,0));
-        }else{
+        if(this.axis=='y'&&this.view==='p'){
             let camDir=new Vector3();
             camDir=this.camera.getWorldDirection(camDir);
             //平面的朝向
@@ -429,16 +545,63 @@ export default class TransformControls2 extends Group{
             let translatePos=objPos.add(this.mouseSubObj);
             //平面位移到鼠标所在处
             plane.translate(objPos);
+        }else{
+            let planeAxis=this.planeAxis[this.view];
+            let planeDir=this.planeDir[this.view];
+            let vec3Plane=new  Vector3();
+            let vec3Pos=new  Vector3();
+            vec3Plane[planeAxis]=planeDir;
+            vec3Pos[planeAxis]=this.objInitPos+this.mouseSubObj[planeAxis];
+            plane=new Plane(vec3Plane);
+            plane.translate(vec3Pos);
         }
+        /*if((axis==='x'||axis==='z'||axis==='xz')&&this.view==='p'){
+            //透视图特殊对待
+            //只有操作特定的轴和视图才如此
+            plane=new Plane(new Vector3(0,1,0));
+            let y=this.objInitPos+this.mouseSubObj.y;
+            //let y=this.object.position.y+this.mouseSubObj.y;
+            //let y=this.mouseSubObj.y;
+            plane.translate(new Vector3(0,y,0));
+        }else{
+
+        }*/
+        //console.log('planeA',plane);
+        this.plane=plane;
+    }
+    //根据向量和距离设置浮动平面
+    getFloatPlane(pos,axis){
+        let vec3Plane=new Vector3();
+
+        vec3Plane[axis]=1;
+        let plane=new Plane(vec3Plane);
+        let objPos=new Vector3();
+        objPos[axis]=pos;
+        plane.translate(objPos);
         return plane;
+        
     }
-    getVector3ByAxis(){
-        switch (this.axis){
-            case 'x':
-            case 'y':
-            case 'z':
+    //根据视图获取轴
+    getAxisByView(){
+        let axis=null;
+        switch (this.view){
+            case 'p':
+            case 'b':
+            case 't':
+                axis='y';
+                break;
+            case 'f':
+            case 'c':
+                axis='z';
+                break;
+            case 'l':
+            case 'r':
+                axis='x';
+                break;
         }
+        return axis;
     }
+
     //自定义事件监听对象
     addEventListener(evt,fn){
         if(this.events[evt]){
@@ -514,14 +677,39 @@ export default class TransformControls2 extends Group{
         //显示操作轴
         let picker=this.transform.getObjectByName(this.mode);
         picker.visible=true;
-        //将picker 定位到object 的中心点
-        //捕捉中心点
-        let center=this.getObjectCenter(object);
-        let pos=object.position.clone();
+        //可碰撞物体的删除
+        this.deleteCrashableObj(object);
+        this.updateTransformAttrByObj();
+
+
+    }
+    //分离
+    detach(){
+        //可碰撞物体的载入
+        this.addCrashableObj(this.object);
+        //控制轴、虚拟物体都不可见
+        this.visible=false;
+        //当前选择物体置空
+        this.object=null;
+        //取消选择轴
+        this.setAxis(null);
+        //没有划上的轴
+        this.hoverAxis=null;
+
+    }
+    //根据物体更新与其绑定的变换信息
+    updateTransformAttrByObj(){
+        //object 的中心点
+        let center=this.getObjectCenter(this.object);
+        let pos=this.object.position.clone();
         //控制器位置
         this.transform.position.copy(center);
         //缩放控制器
         this.setScalar();
+        //平面偏移位置
+        let planeAxis=this.planeAxis[this.view];
+        this.objInitPos=pos[planeAxis];
+        this.transInitPos=this.transform.position[planeAxis];
         //控制器位置减去物体位置
         this.transSubObj=center.clone().sub(pos);
         //物体中心位置减去物体位置
@@ -530,11 +718,24 @@ export default class TransformControls2 extends Group{
         this.setDummyPosByObj();
         //存储虚拟物体的尺寸
         this.saveDummySize();
-        //可碰撞物体的删除
-        this.deleteCrashableObj(object);
+        //物体位置减其六个边界的位置
+        this.setObjSubBound();
     }
-
-
+    //物体位置减其六个边界的位置
+    setObjSubBound(){
+        let pos=this.object.position;
+        let {min,max}=this.dummyBound.box;
+        let [l,b,c,r,t,f]=[min.x,min.y,min.z,max.x,max.y,max.z];
+        this.objSubBound={
+            p:pos.y-b,
+            t:pos.y-b,
+            b:pos.y-t,
+            l:pos.x-r,
+            r:pos.x-l,
+            f:pos.z-c,
+            c:pos.z-f
+        };
+    }
     //根据实际物体位置设置虚拟物体位置
     setDummyPosByObj(){
         //建立虚拟盒子
@@ -551,6 +752,8 @@ export default class TransformControls2 extends Group{
     }
     //设置虚拟边界对象的Box，基于鼠标位置，鼠标减中心点和边界盒子的长宽高
     setDummyPosByMouse(point){
+        //盒子的中心点
+        //焦点减鼠标减中心点的位置
         let boxCenter=point.clone().sub(this.mouseSubCenter);
         let dis=this.dummyBound.whd.clone().divideScalar(2);
         let min1=boxCenter.clone().sub(dis);
@@ -575,21 +778,7 @@ export default class TransformControls2 extends Group{
         let center=new Vector3();
         return box3.getCenter(center);
     }
-    //分离
-    detach(){
-        //可碰撞物体的载入
-        this.addCrashableObj(this.object);
-        //this.mouseSubTrans=new Vector3();
-        //控制轴、虚拟物体都不可见
-        this.visible=false;
-        //当前选择物体置空
-        this.object=null;
-        //取消选择轴
-        this.setAxis(null);
-        //没有划上的轴
-        this.hoverAxis=null;
 
-    }
     //建立虚拟物体
     crtDummy(){
         this.dummyBound = new Box3Helper();
@@ -752,6 +941,7 @@ export default class TransformControls2 extends Group{
     }
     //可碰撞物体的载入
     addCrashableObj(furn){
+        if(!furn){return}
         for(let crashableMesh of this.crashableMeshs){
             if (crashableMesh.furnId===furn.id){
                 //return 会终止循环和方法内的单线程
@@ -767,12 +957,43 @@ export default class TransformControls2 extends Group{
                 })
             }else{
                 //计算其box 边界
+                let box=_this.getBox(obj);
+                let {min,max}=box;
+                let [l,b,c,r,t,f]=[min.x,min.y,min.z,max.x,max.y,max.z];
                 _this.crashableMeshs.push({
-                    box:_this.getBox(obj),
                     id:obj.id,
-                    furnId:furn.id
+                    furnId:furn.id,
+                    floatFaces:_this.getFloatFace(l,b,c,r,t,f),
+                    p:t,
+                    box,l,b,c,r,t,f
                 })
             }
+        }
+    }
+    //浮动检测
+    checkFloat(){
+
+    }
+    //获取可碰撞物体的浮动面
+    getFloatFace(l,b,c,r,t,f){
+        let [ltc,ltf,rtf,rtc,lbc,lbf,rbf,rbc]=[
+            new Vector3(l,t,c),
+            new Vector3(l,t,f),
+            new Vector3(r,t,f),
+            new Vector3(r,t,c),
+            new Vector3(l,b,c),
+            new Vector3(l,b,f),
+            new Vector3(r,b,f),
+            new Vector3(r,b,c),
+        ]
+        return {
+            p:[[ltc,ltf,rtf],[rtf,rtc,ltc]],
+            t:[[ltc,ltf,rtf],[rtf,rtc,ltc]],
+            b:[[lbf,lbc,rbc],[rbc,rbf,lbf]],
+            f:[[ltf,lbf,rbf],[rbf,rtf,ltf]],
+            c:[[rtc,rbc,lbc],[lbc,ltc,rtc]],
+            l:[[ltc,lbc,lbf],[lbf,ltf,ltc]],
+            r:[[rtf,rbf,rbc],[rbc,rtc,rtf]],
         }
     }
     //可碰撞物体的删除
@@ -795,6 +1016,7 @@ export default class TransformControls2 extends Group{
     setDragAxisByView(){
         switch (this.view){
             case 'p':
+            case 'b':
             case 't':
                 this.setAxis('xz');
                 break;
@@ -808,5 +1030,17 @@ export default class TransformControls2 extends Group{
                 break;
         }
     }
-
+    //可碰撞吸附的变化
+    toggleCrashable(){
+        this.crashable=!this.crashable;
+        if(!this.crashable){
+            this.sever=false;
+        }
+        this.events['crashable-change']({value:this.crashable});
+    }
+    //可浮动的变化
+    toggleFloatable(){
+        this.floatable=!this.floatable;
+        this.events['floatable-change']({value:this.crashable});
+    }
 }
