@@ -449,15 +449,25 @@ export default class TransformControls2 extends Group{
         let planeAxis=this.planeAxis[this.view];
         let floatObj=this.findFloatObj();
         if(floatObj!==this.floatObj){
-            let objPos,transPos;
+            let newPlanePos,oldPlanePos;
             if(floatObj===null){
                 //默认水平位置为0
-                objPos=this.objSubBound[this.view];
+                newPlanePos=0;
             }else{
-                objPos=floatObj[this.view]+this.objSubBound[this.view];
-
+                newPlanePos=floatObj[this.view];
             }
+            if(this.floatObj===null){
+                //默认水平位置为0
+                oldPlanePos=0;
+            }else{
+                oldPlanePos=this.floatObj[this.view];
+            }
+
+            let objPos=newPlanePos+this.objSubBound[this.view];
             this.object.position[planeAxis]=objPos;
+            //重置虚拟盒子位置
+            this.dummyBound.box=this.getBox(this.object);
+
             this.transform.position[planeAxis]=objPos+this.transSubObj[planeAxis];
             this.floatObj=floatObj;
         }
@@ -520,8 +530,6 @@ export default class TransformControls2 extends Group{
     }
     //获取鼠标在平面上的焦点
     getFocus(){
-        console.log('this.plane',this.plane);
-        console.log('this.raycaster.ray',this.raycaster.ray);
         let vec3=new Vector3();
         return this.raycaster.ray.intersectPlane(this.plane,vec3);
     }
@@ -769,7 +777,7 @@ export default class TransformControls2 extends Group{
         }
         let box3=new Box3(min2,max2);
         this.dummyBound.box=box3;
-        this.dummyBound.updateMatrixWorld();
+        //this.dummyBound.updateMatrixWorld();
     }
     //获取物体中心
     getObjectCenter(object=this.object){
