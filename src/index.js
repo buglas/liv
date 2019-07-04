@@ -97,6 +97,9 @@ let {innerWidth,innerHeight}=window;
 innerHeight-=5;
 let rec=document.getElementById('rec');
 let statsDom=document.getElementById('statsDom');
+//按键,f 跟浮动冲突
+// p: 80, t: 84, b: 66, r: 82,l: 76,f: 70,c: 67
+let keys={ p:80,t:84,l:76,f:70};
 
 let view='p';
 let camDir=new Vector3();
@@ -113,6 +116,8 @@ let scene=new Scene();
 let cameras={
     p:cameraP(),
     f:cameraF(),
+    t:cameraT(),
+    l:cameraL(),
 }
 let camera=null;
 
@@ -122,39 +127,8 @@ scene.add(transCtrl2);
 let orbitControls = new OrbitControls(cameras[view]);
 //orbitControls.target=new Vector3(.7,0,0);
 //orbitControls.update();
-orbitControls.addEventListener( 'change', function(){
-    transCtrl2.setScalar();
-    render();
-});
-orbitControls.addEventListener( 'end', function(event){
-    //判断相机旋转
-    console.log(camDir);
-    console.log(getCamDir());
-    if(view!=='p'&&!camDir.equals(getCamDir())){
-        console.log('www');
-    }
-    
-
-});
 
 
-setTimeout(function(){
-    changeView('f');
-},1000)
-//切换视图
-function changeView(v){
-    if(v===view){return}
-    view=v;
-    transCtrl2.view=v;
-    transCtrl2.camera=cameras[view];
-    transCtrl2.setScalar();
-    transCtrl2.setInitPlane();
-    //orbitControls.reset();
-    orbitControls.object=cameras[view];
-    //存储相机方向，用于正交平面转正交透视的判断
-    camDir=getCamDir();
-    render();
-}
 
 
 let boxGeo = new  BoxBufferGeometry(.4,.2,.8);
@@ -166,6 +140,7 @@ let boxMat = new  MeshLambertMaterial({
 });
 let boxMesh = new  Mesh(boxGeo, boxMat);
 boxMesh.name='boxMesh';
+boxMesh.translateY(.1);
 boxMesh.receiveShadow=true;
 scene.add(boxMesh);
 transCtrl2.machine(boxMesh,false);
@@ -215,14 +190,68 @@ let furnsGui=gui.addFolder('分体厅柜');
 furnsGui.add(fttg,'crtDiTai','地台');
 furnsGui.open();
 
-//此事件实际上可以被覆盖掉的
+
 //解决拖拽冲突
 transCtrl2.addEventListener( 'dragging-changed', function ( event ) {
     orbitControls.enabled = ! event.value;
 } );
+//拖拽时，实时渲染
 transCtrl2.addEventListener( 'change', function ( event ) {
     render();
 } );
+//轨道控制器旋转实时监听变化
+orbitControls.addEventListener( 'change', function(){
+    transCtrl2.setScalar();
+    render();
+});
+//轨道控制器，拖拽结束后，根据相机方向变化判断旋转
+orbitControls.addEventListener( 'end', function(event){
+    //判断相机旋转
+    let curCamDir=getCamDir();
+    let cos=1-Math.abs(camDir.dot( curCamDir));
+    if(view!=='p'&&cos>0.000001){
+        transCtrl2.view='p';
+        transCtrl2.setInitPlane();
+    }
+});
+//鼠标抬起监听
+window.addEventListener('keydown',function (event) {
+    if(!event.shiftKey&&!event.ctrlKey&&!event.altKey&&!event.metaKey) {
+        console.log('视图切换');
+        switch (event.keyCode) {
+            case keys.t:
+                changeView('t');
+                break;
+            case keys.p:
+                changeView('p');
+                break;
+            case keys.l:
+                changeView('l');
+                break;
+            case keys.f:
+                changeView('f');
+                break;
+        }
+    }
+
+})
+
+//切换视图
+function changeView(v){
+    if(v===view){return}
+    view=v;
+    transCtrl2.view=v;
+    transCtrl2.camera=cameras[view];
+    transCtrl2.setScalar();
+    transCtrl2.setInitPlane();
+    //指定轨道的相机，并更新
+    orbitControls.object=cameras[view];
+    orbitControls.update();
+    //存储相机方向，用于正交平面转正交透视的判断
+    camDir=getCamDir();
+
+    render();
+}
 
 //建立地台
 function crtDiTai(){
@@ -256,7 +285,6 @@ function crtDiTai(){
 //建立相机
 function cameraP(){
     let camera=new PerspectiveCamera(45,innerWidth/innerHeight,0.1,1000);
-    camera.name='camera'
     camera.position.set(1,1.2,2);
     camera.lookAt(scene.position);
     camera.updateMatrixWorld();
@@ -265,19 +293,23 @@ function cameraP(){
 
 }
 function cameraF(){
-    
-    return crtOrth(0,0,200);
+    return crtOrth(0,0,20);
+}
+function cameraT(){
+    return crtOrth(0,20,0);
+}
+function cameraL(){
+    return crtOrth(20,0,0);
 }
 function crtOrth(x,y,z){
     camera = new OrthographicCamera( innerWidth / - 2, innerWidth / 2, innerHeight / 2, innerHeight / - 2, 0, 1000 );
-    camera.name='camera'
     camera.zoom=500;
     camera.position.set(x,y,z);
     camera.updateProjectionMatrix();
     scene.add( camera );
-    
     return camera;
 }
+//获取相机方向
 function getCamDir(){
     let dir=new Vector3();
     dir=cameras[view].getWorldDirection(dir);

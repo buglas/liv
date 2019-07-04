@@ -164,16 +164,22 @@ export default class TransformControls2 extends Group{
             _this.mousemoveFn(event);
         })
         window.addEventListener('keydown',function (event) {
-            switch (event.key){
-                case 'c':
-                    //吸附开关
-                    _this.toggleCrashable();
-                    break;
-                case 'f':
-                    //浮动开关
-                    _this.toggleFloatable();
-                    break;
+            //按键切换吸附与浮动
+            if(event.shiftKey) {
+                switch (event.key) {
+                    case 'C':
+                        //吸附开关
+                        _this.toggleCrashable();
+                        break;
+                    case 'F':
+                        //浮动开关
+                        _this.toggleFloatable();
+                        break;
+                }
             }
+        })
+        window.addEventListener('keyup',function (event) {
+
         })
         //设置缩放
         //this.setScalar();
@@ -361,7 +367,6 @@ export default class TransformControls2 extends Group{
 
     //设置偏移
     setMouseSubSmth(event){
-        console.log('setMouseSubSmth');
         let focus=this.getFocus(event);
         //设置鼠标位置减物体位置
         this.mouseSubObj=this.getMouseSubObj(focus);
@@ -452,25 +457,20 @@ export default class TransformControls2 extends Group{
         let planeAxis=this.planeAxis[this.view];
         let floatObj=this.findFloatObj();
         if(floatObj!==this.floatObj){
-            let newPlanePos,oldPlanePos;
+            let newPlanePos;
             if(floatObj===null){
                 //默认水平位置为0
                 newPlanePos=0;
             }else{
                 newPlanePos=floatObj[this.view];
             }
-            if(this.floatObj===null){
-                //默认水平位置为0
-                oldPlanePos=0;
-            }else{
-                oldPlanePos=this.floatObj[this.view];
-            }
-
+            //物体浮动后的位置 = 新的平面位 + 物体位减相应边界
             let objPos=newPlanePos+this.objSubBound[this.view];
+            //物体浮动
             this.object.position[planeAxis]=objPos;
             //重置虚拟盒子位置
-            this.dummyBound.box=this.getBox(this.object);
-
+            this.setDummyPosByObj();
+            //重置控制器位置
             this.transform.position[planeAxis]=objPos+this.transSubObj[planeAxis];
             this.floatObj=floatObj;
         }
@@ -694,6 +694,7 @@ export default class TransformControls2 extends Group{
         this.setAxis(null);
         //没有划上的轴
         this.hoverAxis=null;
+        //this.transform.position.set(0,0,0);
 
     }
     //根据物体更新与其绑定的变换信息

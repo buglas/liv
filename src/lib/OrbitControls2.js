@@ -268,17 +268,12 @@ export default class OrbitControls2 extends EventDispatcher{
         if ( zoomChanged ||
             lastPosition.distanceToSquared( this.object.position ) > EPS ||
             8 * ( 1 - lastQuaternion.dot( this.object.quaternion ) ) > EPS ) {
-
             this.dispatchEvent( changeEvent );
-
             lastPosition.copy( this.object.position );
             lastQuaternion.copy( this.object.quaternion );
             zoomChanged = false;
-
             return true;
-
         }
-
         return false;
         
     }
