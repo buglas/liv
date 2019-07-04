@@ -26,6 +26,7 @@ import {
     Box3,Box3Helper,
     Object3D,
     Matrix4,
+    Quaternion,
 } from 'three'
 import Crash from '@/com/Crash'
 
@@ -135,7 +136,8 @@ export default class TransformControls2 extends Group{
         this.crashable=true;
         //可浮动
         this.floatable=true;
-
+        //拖拽形态：'axis' 轴，'object' 物体,null 啥也没有
+        this.dragState=false;
         //初始化
         this.init();
     }
@@ -147,9 +149,6 @@ export default class TransformControls2 extends Group{
         //建立操作轴，并先将其隐藏
         this.crtTransform();
         
-        console.log('this.crashable',this.crashable);
-
-
         //注册轴与物体点击事件，试试自定义事件,将点击对象赋予object
         let _this=this;
         this.domElement.addEventListener('mousedown',function (event) {
@@ -177,11 +176,10 @@ export default class TransformControls2 extends Group{
             }
         })
         //设置缩放
-        this.setScalar();
+        //this.setScalar();
 
     }
     mousedownFn(event){
-        console.log(event.buttons);
         switch (event.buttons){
             case 1:
                 //鼠标左击
@@ -194,10 +192,13 @@ export default class TransformControls2 extends Group{
 
     }
     mouseupFn(event){
+
         //拖拽的时候
         this.mouseupOfAxis(event);
         //在空处抬起的时候
         this.mouseupOfEmpty(event);
+        //拖拽形态
+        this.dragState=null;
     }
     mousemoveFn(event){
         //只要轴不为空方可移动
@@ -231,6 +232,8 @@ export default class TransformControls2 extends Group{
                 this.setAxis(null);
                 this.events['change']();
             }
+            //记录拖拽形态
+            this.dragState='axis';
             //▷ 在操作轴里，获取选择对象
             let curSelected=this.getIntersectObject(event);
             if(curSelected){
@@ -248,6 +251,8 @@ export default class TransformControls2 extends Group{
     //鼠标点击在家具上
     mousedownOfFurn(event){
         if (this.axis){return;}
+        //记录拖拽形态
+        this.dragState='object';
         //选择对象
         let curSelectedObj=this.getIntersectObject(event,this.selectableFurns);
         if(curSelectedObj){
@@ -300,17 +305,14 @@ export default class TransformControls2 extends Group{
         if(this.axis){
             //只要选择了轴，在鼠标抬起时
             //取消轴选择
-            this.unactAxis();
+            if(this.dragState!=='axis'){
+                this.unactAxis();
+            }
             this.axis=null;
             //设置虚拟物体位置
             //虚拟物体位置吻合实际物体位置
             //以应对吸附和浮动的情况
             this.setDummyPosByObj();
-            /*if(this.sever){
-                //若分离
-                //虚拟物体位置吻合实际物体位置
-                this.setDummyPosByObj();
-            }*/
             //可拖拽
             this.events['dragging-changed']({value:false});
             //需渲染
@@ -359,6 +361,7 @@ export default class TransformControls2 extends Group{
 
     //设置偏移
     setMouseSubSmth(event){
+        console.log('setMouseSubSmth');
         let focus=this.getFocus(event);
         //设置鼠标位置减物体位置
         this.mouseSubObj=this.getMouseSubObj(focus);
@@ -563,18 +566,6 @@ export default class TransformControls2 extends Group{
             plane=new Plane(vec3Plane);
             plane.translate(vec3Pos);
         }
-        /*if((axis==='x'||axis==='z'||axis==='xz')&&this.view==='p'){
-            //透视图特殊对待
-            //只有操作特定的轴和视图才如此
-            plane=new Plane(new Vector3(0,1,0));
-            let y=this.objInitPos+this.mouseSubObj.y;
-            //let y=this.object.position.y+this.mouseSubObj.y;
-            //let y=this.mouseSubObj.y;
-            plane.translate(new Vector3(0,y,0));
-        }else{
-
-        }*/
-        //console.log('planeA',plane);
         this.plane=plane;
     }
     //根据向量和距离设置浮动平面
@@ -934,8 +925,14 @@ export default class TransformControls2 extends Group{
     setScalar(){
         let worldPosition=new Vector3();
         worldPosition=this.transform.getWorldPosition(worldPosition);
+        let zoom=this.camera.zoom;
         let eyeDistance = worldPosition.distanceTo( this.camera.position);
-        this.transform.scale.set( 1, 1, 1 ).multiplyScalar( eyeDistance * this.size / 7 );
+        //判断相机类型
+        if(this.camera.isPerspectiveCamera){
+            this.transform.scale.set( 1, 1, 1 ).multiplyScalar( eyeDistance * this.size / 7 );
+        }else{
+            this.transform.scale.set( 1, 1, 1 ).multiplyScalar( 130/zoom);
+        }
     }
 
     /*与轴无关的东东*/

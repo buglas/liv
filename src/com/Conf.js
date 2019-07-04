@@ -1,4 +1,5 @@
 const Conf={
-    unit:0.001
+    //默认1 为1米
+    unit:1,
 };
 export default Conf;
