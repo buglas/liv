@@ -93,9 +93,20 @@ const {
     }
 })(typeof window==="undefined"?this:window);
 
-let {innerWidth,innerHeight}=window;
-innerHeight-=5;
-let rec=document.getElementById('rec');
+//撑开body 的东东
+let prop=document.getElementById('prop');
+let bottomCont=document.getElementById('bottomCont');
+let toolbarH=document.getElementById('toolbar').clientHeight;
+//setBottomContH();
+let winH=window.innerHeight;
+prop.style.height=winH+'px';
+bottomCont.style.height=winH-toolbarH+'px';
+prop.style.opacity='1';
+//获取视口
+let rec=document.getElementById('view');
+let [innerWidth,innerHeight]=[rec.clientWidth,rec.clientHeight];
+
+
 let statsDom=document.getElementById('statsDom');
 //按键,f 跟浮动冲突
 // p: 80, t: 84, b: 66, r: 82,l: 76,f: 70,c: 67
@@ -124,7 +135,7 @@ let camera=null;
 let transCtrl2=new TransformControls2(cameras[view],domElement);
 scene.add(transCtrl2);
 
-let orbitControls = new OrbitControls(cameras[view]);
+let orbitControls = new OrbitControls(cameras[view],domElement);
 //orbitControls.target=new Vector3(.7,0,0);
 //orbitControls.update();
 
@@ -169,8 +180,10 @@ directionalLight.shadow.camera.bottom = -2;
 // 设置mapSize属性可以使阴影更清晰，不那么模糊
 directionalLight.shadow.mapSize.set(2048,2048);
 
+/*
 let stats=new Stats();
 rec.appendChild( stats.dom );
+*/
 
 let axesHelper = new AxesHelper(20);
 axesHelper.translateY(.001);
@@ -178,17 +191,17 @@ scene.add(axesHelper);
 
 render();
 function render() {
-    stats.begin();
+    //stats.begin();
     renderer.render(scene, cameras[view]);
-    stats.end();
+    //stats.end();
 }
 
 //GUI
-let fttg={crtDiTai};
+/*let fttg={crtDiTai};
 const gui=new GUI();
 let furnsGui=gui.addFolder('分体厅柜');
 furnsGui.add(fttg,'crtDiTai','地台');
-furnsGui.open();
+furnsGui.open();*/
 
 
 //解决拖拽冲突
@@ -217,7 +230,6 @@ orbitControls.addEventListener( 'end', function(event){
 //鼠标抬起监听
 window.addEventListener('keydown',function (event) {
     if(!event.shiftKey&&!event.ctrlKey&&!event.altKey&&!event.metaKey) {
-        console.log('视图切换');
         switch (event.keyCode) {
             case keys.t:
                 changeView('t');
@@ -235,6 +247,15 @@ window.addEventListener('keydown',function (event) {
     }
 
 })
+//窗口变换
+window.addEventListener( 'resize', function(event){
+    setBottomContH();
+    [innerWidth,innerHeight]=[rec.clientWidth,rec.clientHeight];
+    cameras[view].aspect = innerWidth/innerHeight;
+    cameras[view].updateProjectionMatrix();
+    renderer.setSize( innerWidth, innerHeight );
+    render();
+} );
 
 //切换视图
 function changeView(v){
@@ -254,6 +275,7 @@ function changeView(v){
 }
 
 //建立地台
+// crtDiTai()
 function crtDiTai(){
     //取消当前选择
     if(transCtrl2.object){
@@ -314,4 +336,11 @@ function getCamDir(){
     let dir=new Vector3();
     dir=cameras[view].getWorldDirection(dir);
     return dir;
+}
+
+//设置dom 高度自适应
+function setBottomContH(){
+    let winH=window.innerHeight;
+    prop.style.height=winH+'px';
+    bottomCont.style.height=winH-toolbarH+'px';
 }

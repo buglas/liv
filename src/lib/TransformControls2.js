@@ -198,7 +198,6 @@ export default class TransformControls2 extends Group{
 
     }
     mouseupFn(event){
-
         //拖拽的时候
         this.mouseupOfAxis(event);
         //在空处抬起的时候
@@ -246,6 +245,15 @@ export default class TransformControls2 extends Group{
                 //选择了操作轴
                 //根据底部子级，获取其对应的指定集合里的元素
                 this.setAxis(curSelected.object.name[0]);
+                //如果当前视图为'p',轴为'y'，切换this.plan
+                if(this.view==='p'){
+                    if(this.axis==='y'){
+                        this.setInitPlaneInPforY();
+                    }else{
+                        this.setInitPlane();
+                    }
+
+                }
                 this.setMouseSubSmth(event);
                 //启动拖拽事件
                 this.events['dragging-changed']({value:true});
@@ -265,27 +273,26 @@ export default class TransformControls2 extends Group{
             //存在选择的物体
             //启动拖拽事件
             this.events['dragging-changed']({value:true});
+            //针对透视图，切换this.plane 为水平面
+            if(this.view==='p'){
+                this.setInitPlane();
+            }
             //选择到了对象
             //let sceneChild=getSceneChild(curSelectedObj.object);
             //从parents中获取包含子元素selected 的元素
-            let sceneChild=this.getParentInArray(curSelectedObj.object,this.selectableFurns)
-
+            let sceneChild=this.getParentInArray(curSelectedObj.object,this.selectableFurns);
             //选择对象的差异判断
             let transObj=this.object;
             if(transObj){
                 //object物体已存在
                 //判断之前选择物体和现在选择物体是否是同一个
-                if(sceneChild===transObj){
-                    //是同一个，更新与物体绑定的变换属性
-                    this.updateTransformAttrByObj();
-                }else{
+                if(sceneChild!==transObj){
                     //不是同一个
                     this.detach(transObj);
                     this.attach(sceneChild);
                     //render();
                     //需渲染
                     this.events['change']();
-
                 }
             }else{
                 this.attach(sceneChild);
@@ -293,8 +300,6 @@ export default class TransformControls2 extends Group{
                 //需渲染
                 this.events['change']();
             }
-
-
 
             //设置拖拽轴
             this.setDragAxisByView();
@@ -314,15 +319,20 @@ export default class TransformControls2 extends Group{
             if(this.dragState!=='axis'){
                 this.unactAxis();
             }
+            //正在操作的轴置空
             this.axis=null;
             //设置虚拟物体位置
             //虚拟物体位置吻合实际物体位置
             //以应对吸附和浮动的情况
-            this.setDummyPosByObj();
+            //this.setDummyPosByObj();
+
+            this.updateTransformAttrByObj()
+
             //可拖拽
             this.events['dragging-changed']({value:false});
             //需渲染
             this.events['change']();
+
         }
     }
     //鼠标抬起时，处于空处
@@ -428,15 +438,17 @@ export default class TransformControls2 extends Group{
     }
     //移动物体
     moveObj(event){
+        console.log('moveObj');
         //设置射线，根据相机和鼠标位
         this.setRaycaster(event);
         //根据浮动设置物体位置
         this.setObjFloatPos()
         //获取鼠标在平面上的焦点
         let focus=this.getFocus();
-
+        
         //若鼠标点击的位置在视平线以上，相机到鼠标的射线是不会和地面产生焦点的
         if(focus){
+            //console.log('focus',focus);
             //所选物体和控制轴可见
             this.setVisibleByFocus(true);
             //先根据鼠标位置，设置边界盒子位置
@@ -547,38 +559,39 @@ export default class TransformControls2 extends Group{
         //平面的朝向
         let axis=this.axis;
         let plane=null;
-        if(this.axis=='y'&&this.view==='p'){
-            let camDir=new Vector3();
-            camDir=this.camera.getWorldDirection(camDir);
-            //平面的朝向
-            plane=new Plane(camDir);
-            let objPos=this.object.position.clone();
-            let translatePos=objPos.add(this.mouseSubObj);
-            //平面位移到鼠标所在处
-            plane.translate(objPos);
-        }else{
-            let planeAxis=this.planeAxis[this.view];
-            let planeDir=this.planeDir[this.view];
-            let vec3Plane=new  Vector3();
-            let vec3Pos=new  Vector3();
-            vec3Plane[planeAxis]=planeDir;
-            vec3Pos[planeAxis]=this.objInitPos+this.mouseSubObj[planeAxis];
-            plane=new Plane(vec3Plane);
-            plane.translate(vec3Pos);
-        }
+        let planeAxis=this.planeAxis[this.view];
+        let planeDir=this.planeDir[this.view];
+        let vec3Plane=new  Vector3();
+        let vec3Pos=new  Vector3();
+        vec3Plane[planeAxis]=planeDir;
+        vec3Pos[planeAxis]=this.objInitPos+this.mouseSubObj[planeAxis];
+        plane=new Plane(vec3Plane);
+        plane.translate(vec3Pos);
+        this.plane=plane;
+    }
+    //在透视图，轴向为有y 时的平面
+    setInitPlaneInPforY(){
+        let axis=this.axis;
+        let plane=null;
+        let camDir=new Vector3();
+        camDir=this.camera.getWorldDirection(camDir);
+        //平面的朝向
+        plane=new Plane(camDir);
+        let objPos=this.object.position.clone();
+        let translatePos=objPos.add(this.mouseSubObj);
+        //平面位移到鼠标所在处
+        plane.translate(objPos);
         this.plane=plane;
     }
     //根据向量和距离设置浮动平面
     getFloatPlane(pos,axis){
         let vec3Plane=new Vector3();
-
         vec3Plane[axis]=1;
         let plane=new Plane(vec3Plane);
         let objPos=new Vector3();
         objPos[axis]=pos;
         plane.translate(objPos);
         return plane;
-        
     }
     //根据视图获取轴
     getAxisByView(){

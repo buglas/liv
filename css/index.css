@@ -1,0 +1,215 @@
+*{box-sizing: border-box;}
+body{
+    margin: 0;
+    background-color: #21293b;
+    color: #c3c8d8;
+    font-size: 12px;
+}
+
+/*视图文字背景*/
+.back1{background-color: #0c1426}
+/*下拉列表选中，下拉视图文字*/
+.back2{background-color: #161e30}
+/*视图背景*/
+.back3{background-color: #21293b}
+/*输入框，菜单文字，选中按钮背景*/
+.back4{background-color: #262e46}
+/*下拉列表背景*/
+.back5{background-color: #2b344f}
+/*面板背景*/
+.back6{background-color: #303a58}
+/*按钮背景*/
+.back6{background-color: #47516f}
+/*鼠标划上按钮背景*/
+.back6{background-color: #555e7b}
+
+/*文字背景*/
+.color1{color:#c3c8d8}
+/*下拉视图文字背景*/
+.color2{color:#8b93ab}
+/*线*/
+.line{
+    border-bottom: 1px solid #47516f;
+    margin-bottom: 9px;
+}
+/*标准间距*/
+.mb9{
+    margin-bottom: 9px;
+}
+
+/*----------表单定制----------*/
+.liv-group{
+    margin-bottom: 9px;
+}
+.liv-group label{
+    display: block;
+    margin-bottom: 9px;
+}
+.liv-inp-wraper{
+    position: relative;
+    margin-bottom: 9px;
+}
+.liv-group input{
+    width: 100%;
+    height: 24px;
+    line-height: 24px;
+    border: none;
+    color:#c3c8d8;
+    font-size: 12px;
+    padding: 0 6px;
+    background-color: #262e46;
+}
+.liv-selection{
+    cursor: pointer;
+}
+/*input 的下拉列表样式*/
+.liv-down{
+    position: absolute;
+    right: 4px;
+    top:50%;
+    transform: translateY(-50%);
+    z-index: 20;
+    display: none;
+}
+.liv-selection .liv-down{
+    display: inline;
+}
+/*下拉列表*/
+#livList{
+    position: absolute;
+    width: 162px;
+    top:0;
+    left: 0;
+    color:#c3c8d8;
+    font-size: 12px;
+    background-color: #2b344f;
+    display: none;
+}
+#livList .option{
+    height: 24px;
+    line-height: 24px;
+    padding: 0 6px;
+    cursor: pointer;
+}
+#livList .option:hover{
+    background-color: #161e30;
+}
+/*家具按钮*/
+#furns{
+    margin: -1px -1px 8px -1px;
+}
+.furn{
+    display: inline-block;
+    height: 24px;
+    line-height: 24px;
+    padding: 0 6px;
+    margin: 1px;
+    background-color: #47516f;
+    cursor: pointer;
+}
+.furn:hover{
+    /*background-color: #555e7b;*/
+}
+
+.btn-act{
+    background-color: #262e46;
+}
+
+/*撑开body*/
+#prop{
+    width: 100%;
+    opacity: 0;
+    overflow: hidden;
+}
+/*----------工具条----------*/
+#toolbar{
+    height: 30px;
+    background-color: #303a58;
+    cursor: default;
+}
+/*logo*/
+#logo{
+    display: inline-block;
+    margin: 4px
+}
+.bar-btn{
+    display: inline-block;
+    height: 22px;
+    line-height: 22px;
+    margin-top:4px;
+    padding-left: 9px;
+    padding-right: 9px;
+    background-color: #47516f;
+}
+.bar-btn:not(.btn-act):hover{
+    cursor: pointer;
+    background-color: #555e7b;
+}
+.btn-act{
+    background-color:#262e46 ;
+}
+
+/*----------下方内容----------*/
+#bottomCont{
+    position: relative;
+    background-color: #21293b
+}
+/*-------视图-------*/
+#view{
+    height:100%;
+}
+/*-------生产面板-------*/
+/*生产面板包裹器*/
+#panelCrtWrapper{
+    position: absolute;
+    display: flex;
+    width: 199px;
+    top:1px;
+    bottom: 0;
+    right:0;
+    transition: transform 100ms;
+}
+/*推拉箭头*/
+#dragArrowWrapper{
+    width: 19px;
+}
+#dragArrow{
+    position: relative;
+    height: 99px;
+    top: 50%;
+    transform:translateY(-50%);
+    background-repeat: no-repeat;
+    background-position-x: 10px;
+    background-image: url("/images/fold.svg");
+    cursor: pointer;
+    transform-origin: 100% 100%;
+    transition: transform 60ms;
+}
+/*#dragArrow:hover{
+    transform:scale(2);
+}*/
+.fold{
+    transform: translateX(180px);
+}
+/*面板*/
+.panel{
+    padding: 9px;
+    background-color: #303a58;
+}
+
+
+
+
+/*生产面板*/
+#panelCrt{
+    width: 180px;
+
+}
+/*-------编辑面板-------*/
+#panelEdit{
+    position: absolute;
+    width: 180px;
+    height: 100px;
+    left: 0;
+    top:1px;
+}

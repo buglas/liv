@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+    <style>
+        *{touch-action: none;box-sizing: border-box;}
+        body{
+            margin: 0;
+
+        }
+
+        /*视图文字背景*/
+        .back1{background-color: #0c1426}
+        /*下拉列表选中，下拉视图文字*/
+        .back2{background-color: #161e30}
+        /*视图背景*/
+        .back3{background-color: #21293b}
+        /*输入框，菜单文字，选中按钮背景*/
+        .back4{background-color: #262e46}
+        /*下拉列表背景*/
+        .back5{background-color: #2b344f}
+        /*面板背景*/
+        .back6{background-color: #303a58}
+        /*按钮背景*/
+        .back6{background-color: #47516f}
+        /*鼠标划上按钮背景*/
+        .back6{background-color: #555e7b}
+
+        /*文字背景*/
+        .color1{color:#c3c8d8}
+        /*下拉视图文字背景*/
+        .color2{color:#8b93ab}
+
+        /*撑开body*/
+        #prop{
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            top:0;
+            bottom: 0;
+        }
+        /*工具条*/
+        #toolbar{
+            height: 30px;
+            background-color: #303a58;
+        }
+        /*下方内容*/
+        #bottomCont{
+            flex: 1;
+            position: relative;
+            
+        }
+        /*view 视图*/
+        #view{
+            height: 100%;
+            background-color: #21293b
+        }
+        /*生产面板包裹器*/
+        #panelCrtWrapper{
+            position: absolute;
+            display: flex;
+            top:1px;
+            bottom: 0;
+            right:0;
+        }
+        /*推拉箭头*/
+        #dragArrowWrapper{
+            width: 19px;
+        }
+        #dragArrow{
+            position: relative;
+            height: 99px;
+            top: 50%;
+            transform:translateY(-50%);
+            background-repeat: no-repeat;
+            background-position-x: 10px;
+            background-image: url("/images/fold.png");
+            cursor: pointer;
+        }
+        #dragArrow:hover{
+            background-image: url("/images/fold-act.png");
+        }
+        /*生产面板*/
+        #panelCrt{
+            width: 180px;
+            background-color: #303a58;
+
+        }
+        /*编辑面板*/
+        #panelEdit{
+            position: absolute;
+            width: 180px;
+            height: 100px;
+            top:1px;
+            left:0;
+            background-color: #303a58;
+        }
+    </style>
+</head>
+<body>
+<div id="prop">
+    <!--工具条-->
+    <div id="toolbar">
+        <div id="logo">
+            <img src="/images/logo.svg" alt="艺心一艺">
+        </div>
+        <div class="bar-btn btn-form"></div>
+        <div class="bar-btn btn-form"></div>
+        <div class="bar-btn btn-form"></div>
+        <div class="bar-btn"></div>
+        <div class="bar-btn"></div>
+    </div>
+    <div id="bottomCont">
+        <!--视图-->
+        <div id="view">
+            
+        </div>
+        <!--工具面板-->
+        <!--生产面板包裹器-->
+        <div id="panelCrtWrapper">
+            <!--推拉箭头-->
+            <div id="dragArrowWrapper">
+                <div id="dragArrow"></div>
+            </div>
+            <!--生产面板-->
+            <div id="panelCrt">
+
+            </div>
+        </div>
+
+        <!--编辑面板-->
+        <div id="panelEdit">
+
+        </div>
+    </div>
+</div>
+<script src="liv.js"></script>
+<!--<script src="./dist/liv.js"></script>-->
+</body>
+</html>
