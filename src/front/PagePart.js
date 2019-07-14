@@ -113,6 +113,9 @@ prop.addEventListener('mousedown',onPropMousedown);
 livList.addEventListener('click',onListClick);
 
 /*----------页面的操作----------*/
+//页面变化 onWinResize
+window.addEventListener( 'resize',onWinResize);
+
 //生成面板的折叠
 let dragArrow=document.getElementById('dragArrow');
 let panelCrtWrapper=document.getElementById('panelCrtWrapper');

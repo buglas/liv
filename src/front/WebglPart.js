@@ -1,90 +1,46 @@
-import * as THREE from 'three';
-
+import {
+    Scene,PerspectiveCamera,WebGLRenderer,Color,AxesHelper,BoxBufferGeometry,MeshLambertMaterial,Mesh,AmbientLight,DirectionalLight,Vector3,OrthographicCamera
+} from 'three';
 import OrbitControls from 'three-orbitcontrols'
-import {GUI} from 'dat.gui'
-import TransformControls from '@/lib/TransformControls'
-import Stats  from '@/lib/Stats'
 import DiTai from '@/furns/DiTai'
 import TransformControls2 from '@/lib/TransformControls2'
-import OrbitControls2 from '@/lib/OrbitControls2'
 import Mats from '@/com/Mats'
 
 
-const {
-    Scene,PerspectiveCamera,WebGLRenderer,Color,AxesHelper,BoxBufferGeometry,MeshLambertMaterial,Mesh,AmbientLight,DirectionalLight,Vector3,OrthographicCamera
-}=THREE;
-/*(function(global){
-    if(!global.requestAnimationFrame){
-        global.requestAnimationFrame =(global.webkitRequestAnimationFrame||
-            global.mozRequestAnimationFrame||
-            global.oRequestAnimationFrame||
-            global.msRequestAnimationFrame||
-            function(callback){
-                return global.setTimeout(callback,1000/60);
-            });
+export default class WebglPart{
+    constructor(){
+        this.events={
+            //window 尺寸变化
+            'resize':()=>{},
+        }
     }
-    if (!global.cancelAnimationFrame) {
-        global.cancelAnimationFrame = (global.cancelRequestAnimationFrame ||
-            global.webkitCancelAnimationFrame || global.webkitCancelRequestAnimationFrame ||
-            global.mozCancelAnimationFrame || global.mozCancelRequestAnimationFrame ||
-            global.msCancelAnimationFrame || global.msCancelRequestAnimationFrame ||
-            global.oCancelAnimationFrame || global.oCancelRequestAnimationFrame ||
-            global.clearTimeout);
+    //自定义事件监听对象
+    addEventListener(evt,fn){
+        if(this.events[evt]){
+            this.events[evt]=fn;
+        }else{
+            console.log('TansformControls 没有此事件');
+        }
     }
-    global.THREE={};
-    global.Liv={
-        DiTai,Mats,GUI,TransformControls,OrbitControls,Stats,
 
-        Scene,PerspectiveCamera,WebGLRenderer,Color,
-        Geometry,
-        AxesHelper,PlaneGeometry,PlaneBufferGeometry,SphereGeometry,BoxGeometry,CylinderGeometry,Plane,
-        BufferGeometry,CylinderBufferGeometry,BoxBufferGeometry,
-        BufferAttribute,
-        Sprite,
-        MeshBasicMaterial,MeshLambertMaterial,PointsMaterial,LineBasicMaterial,SpriteMaterial,MeshPhongMaterial,
-        Points,Mesh,Line,SkinnedMesh,
-        AmbientLight,SpotLight,PointLight,DirectionalLight,
-        Fog,
-        Vector2,Vector3,Face3,
-        Group,
-        KeyframeTrack,AnimationClip,AnimationMixer,
-        Clock,
-        ObjectLoader,AudioLoader,
-        Bone,SkeletonHelper,
-        AudioListener,
-        PositionalAudio,Audio,
-        AudioAnalyser,
-        Raycaster,
-        DirectionalLightHelper,
-        Box3,Box3Helper,
-        Float32BufferAttribute,
-        DoubleSide,
-        Matrix4,
-        ArrayCamera,
-        Vector4
-
-    }
-})(typeof window==="undefined"?this:window);*/
-
+}
 //撑开body 的东东
 let prop=document.getElementById('prop');
 let bottomCont=document.getElementById('bottomCont');
 let toolbarH=document.getElementById('toolbar').clientHeight;
-//setBottomContH();
+
 let winH=window.innerHeight;
 prop.style.height=winH+'px';
 bottomCont.style.height=winH-toolbarH+'px';
 prop.style.opacity='1';
+
 //获取视口
 let rec=document.getElementById('view');
 let [innerWidth,innerHeight]=[rec.clientWidth,rec.clientHeight];
 
-
-let statsDom=document.getElementById('statsDom');
 //按键,f 跟浮动冲突
 // p: 80, t: 84, b: 66, r: 82,l: 76,f: 70,c: 67
 let keys={ p:80,t:84,l:76,f:70};
-
 let view='p';
 let camDir=new Vector3();
 
@@ -109,16 +65,8 @@ let transCtrl2=new TransformControls2(cameras[view],domElement);
 scene.add(transCtrl2);
 
 let orbitControls = new OrbitControls(cameras[view],domElement);
-//orbitControls.target=new Vector3(.7,0,0);
-//orbitControls.update();
-
-
-
 
 let boxGeo = new  BoxBufferGeometry(.4,.2,.8);
-/*let m = new Matrix4();
-m.makeTranslation(0.2,.1,.4);
-m.applyToBufferAttribute(boxGeo.attributes.position);*/
 let boxMat = new  MeshLambertMaterial({
     color: 0xff00ff
 });
@@ -129,7 +77,6 @@ boxMesh.receiveShadow=true;
 scene.add(boxMesh);
 transCtrl2.machine(boxMesh,false);
 transCtrl2.attach(boxMesh);
-
 
 //环境光   环境光颜色RGB成分分别和物体材质颜色RGB成分分别相乘
 let ambient = new  AmbientLight(0x444444);
@@ -153,29 +100,14 @@ directionalLight.shadow.camera.bottom = -2;
 // 设置mapSize属性可以使阴影更清晰，不那么模糊
 directionalLight.shadow.mapSize.set(2048,2048);
 
-/*
-let stats=new Stats();
-rec.appendChild( stats.dom );
-*/
-
 let axesHelper = new AxesHelper(20);
 axesHelper.translateY(.001);
 scene.add(axesHelper);
 
 render();
 function render() {
-    //stats.begin();
     renderer.render(scene, cameras[view]);
-    //stats.end();
 }
-
-//GUI
-/*let fttg={crtDiTai};
-const gui=new GUI();
-let furnsGui=gui.addFolder('分体厅柜');
-furnsGui.add(fttg,'crtDiTai','地台');
-furnsGui.open();*/
-
 
 //解决拖拽冲突
 transCtrl2.addEventListener( 'dragging-changed', function ( event ) {
@@ -222,7 +154,8 @@ window.addEventListener('keydown',function (event) {
 })
 //窗口变换
 window.addEventListener( 'resize', function(event){
-    setBottomContH();
+    //setBottomContH();
+    //_this.events['change']();
     [innerWidth,innerHeight]=[rec.clientWidth,rec.clientHeight];
     cameras[view].aspect = innerWidth/innerHeight;
     cameras[view].updateProjectionMatrix();
@@ -243,13 +176,11 @@ function changeView(v){
     orbitControls.update();
     //存储相机方向，用于正交平面转正交透视的判断
     camDir=getCamDir();
-
     render();
 }
 
 //建立地台
 // curFurn()
-
 methods.crtFurn=function(){
     console.log('methods.crtFurn');
     //取消当前选择
@@ -319,3 +250,12 @@ function setBottomContH(){
     prop.style.height=winH+'px';
     bottomCont.style.height=winH-toolbarH+'px';
 }
+
+
+
+
+
+
+
+
+
