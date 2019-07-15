@@ -113,12 +113,12 @@ prop.addEventListener('mousedown',onPropMousedown);
 livList.addEventListener('click',onListClick);
 
 /*----------页面的操作----------*/
+//页面变化 onWinResize
+window.addEventListener( 'resize',onWinResize);
 //生成面板的折叠
 let dragArrow=document.getElementById('dragArrow');
 let panelCrtWrapper=document.getElementById('panelCrtWrapper');
 dragArrow.addEventListener('click',onDragArrowClick);
-
-
 
 /*..........初始化方法..........*/
 function initPage(){
@@ -180,7 +180,6 @@ function setFurnBtnStyle(node){
 function updateFrom(){
     furnForm.innerHTML='';
     let furn=furnsData[curFurn];
-    console.log('furn',furn);
     let furnFormData=furn.form;
     let fragment = '';
     for(let key in furnFormData){
@@ -398,6 +397,7 @@ function onWinResize(){
     let winH=window.innerHeight;
     prop.style.height=winH+'px';
     bottomCont.style.height=winH-toolbarH+'px';
+    
 }
 //生成面板的折叠
 function onDragArrowClick(){
