@@ -111,14 +111,12 @@ export default class TransformControls2 extends Group{
             'mouseover':()=>{},
             //鼠标离开控制轴
             'mouseout':()=>{},
-            //鼠标离开控制轴
-            'mouseout':()=>{},
             //可碰撞吸附属性变化时
             'crashable-change':()=>{},
             //可浮动属性变化时
             'floatable-change':()=>{},
-            //虚拟物体和真实物体分离时
-            //'dummy-sever':()=>{}
+            //家具完成建立
+            'crted':()=>{},
         }
         //物体初始位置，参与计算平面位置和恢复
         this.objInitPos=0;
@@ -138,6 +136,8 @@ export default class TransformControls2 extends Group{
         this.floatable=true;
         //拖拽形态：'axis' 轴，'object' 物体,null 啥也没有
         this.dragState=false;
+        //家具是否正在建立，悬而未放的状态
+        this.crting=false;
         //初始化
         this.init();
     }
@@ -153,16 +153,17 @@ export default class TransformControls2 extends Group{
         let _this=this;
         this.domElement.addEventListener('mousedown',function (event) {
             if(!_this.enable){return}
+            //点击canvas 的事件冒泡，不要将事件传递给上方物体
             _this.mousedownFn(event);
-        })
+        },true);
         this.domElement.addEventListener('mouseup',function (event) {
             if(!_this.enable){return}
             _this.mouseupFn(event);
-        })
+        });
         this.domElement.addEventListener('mousemove',function (event) {
             if(!_this.enable){return}
             _this.mousemoveFn(event);
-        })
+        });
         window.addEventListener('keydown',function (event) {
             //按键切换吸附与浮动
             if(event.shiftKey) {
@@ -178,9 +179,7 @@ export default class TransformControls2 extends Group{
                 }
             }
         })
-        window.addEventListener('keyup',function (event) {
 
-        })
         //设置缩放
         //this.setScalar();
 
@@ -189,6 +188,8 @@ export default class TransformControls2 extends Group{
         switch (event.buttons){
             case 1:
                 //鼠标左击
+                //识别家具在建状态
+                this.checkCrting();
                 //鼠标点击在轴上
                 this.mousedownOfAxis(event);
                 //鼠标拖拽物体
@@ -222,10 +223,19 @@ export default class TransformControls2 extends Group{
             //做轴的划上检测
             this.setHoverAxis(event);
         }
-        
-
     }
 
+    //识别家具在建状态
+    checkCrting(){
+        //当正在创建家具时，当前鼠标没有按下左键，但存在curSelectedObj
+        //鼠标但点击直接放下物体，取消选择
+        //启用orbit
+        if(this.crting){
+            this.crting=false;
+            //家具建立完成事件，前端页面里的家具按钮可以取消选择态
+            this.events['crted']();
+        }
+    }
     //鼠标点击在轴上
     mousedownOfAxis(event){
         if(this.object){
@@ -306,10 +316,11 @@ export default class TransformControls2 extends Group{
             //设置鼠标和相关物体的偏移距离
             this.setMouseSubSmth(event);
         }else{
-            //啥也没选择到
             //记下鼠标按下的事件，等鼠标抬起时，根据此事件判断是否取消选择
             this.clickTime=new Date();
+
         }
+
     }
     //鼠标抬起时，处于拖拽状态
     mouseupOfAxis(event){
@@ -326,7 +337,7 @@ export default class TransformControls2 extends Group{
             //以应对吸附和浮动的情况
             //this.setDummyPosByObj();
 
-            this.updateTransformAttrByObj()
+            this.updateTransformAttrByObj();
 
             //可拖拽
             this.events['dragging-changed']({value:false});
@@ -438,7 +449,6 @@ export default class TransformControls2 extends Group{
     }
     //移动物体
     moveObj(event){
-        console.log('moveObj');
         //设置射线，根据相机和鼠标位
         this.setRaycaster(event);
         //根据浮动设置物体位置
@@ -448,7 +458,6 @@ export default class TransformControls2 extends Group{
         
         //若鼠标点击的位置在视平线以上，相机到鼠标的射线是不会和地面产生焦点的
         if(focus){
-            //console.log('focus',focus);
             //所选物体和控制轴可见
             this.setVisibleByFocus(true);
             //先根据鼠标位置，设置边界盒子位置
