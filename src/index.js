@@ -1,14 +1,21 @@
 import WebglPart from '@/front/WebglPart'
+import Mvvm from '@/front/Mvvm'
+import Tool from '@/com/Tool'
 
-//数据
-//全局数据
-//全局方法集合
+//全局对象
+//图形相关的部分
+let webglPart=new WebglPart(document.getElementById('view'));
+//双向绑定器
+let mvvm=new Mvvm({webglPart});
+//家具默认参数
+let furnDefaultParam={};
+
 //家具类型
 const furnTypes={
     //value 是当前类型的默认
     fttg:{text:'分体厅柜',chidren:['Ditai','Digui']},
     zttg:{text:'整体厅柜',chidren:['Ditai']}
-}
+};
 //所有家具数据
 const furnsData={
     //地柜
@@ -58,12 +65,13 @@ const furnsData={
             }),
         }
     },
-}
+};
+
 
 //当前家具类型
 let curType='fttg';
 //当前家具，默认null
-let curFurn=null;
+let curFurnName=null;
 //当前操作的input 节点
 let curInpDom=null;
 //当前inp 值
@@ -88,8 +96,6 @@ let furnsBtns=document.getElementById('furns');
 //家具的表单
 let furnForm=document.getElementById('furnForm');
 
-//webglPart
-let webglPart=new WebglPart(document.getElementById('view'));
 
 
 /*----------初始化页面----------*/
@@ -150,12 +156,16 @@ function updateFurnBtns(){
     })
     furnsBtns.innerHTML=fragment;
 }
+//初始化图形对象
 function initWebglPart(){
+    //布景
     webglPart.init();
+    //当家具创建完成后
     webglPart.transCtrl2.addEventListener('crted',()=>{
         //取消当前按钮的激活
         unactFurn();
-        //显示当前所选家具的信息
+        //当前家具相关信息置空
+        //clearCurFurnInfo();
         
     })
 }
@@ -165,15 +175,17 @@ function initWebglPart(){
 function onFurnClick(event){
     let node=findNode(event.target,event.currentTarget,'furn');
     let name=node.getAttribute('name');
-    if(node&&curFurn!==name){
-        curFurn=name;
+    if(node){
+        curFurnName=name;
         //家具按钮效果
         setFurnBtnStyle(node);
-        //显示相应表单
+        //显示相应表单,并附带填补furnDefaultParam
         updateFrom();
-        //创建家具
-        //(家具名称,属性键名，属性值)
-        webglPart.crtFurn(curFurn);
+        //创建家具(家具名称)
+        webglPart.crtFurn(curFurnName,furnDefaultParam);
+        //完善绑定数据[{dom:节点,value:值,key:属性}]
+        //根据表单，建立绑定关系集合
+        setSubs();
     }
 }
 //家具按钮效果
@@ -184,10 +196,13 @@ function setFurnBtnStyle(node){
     node.setAttribute('class','furn btn-act');
     curFurnBtn=node;
 }
-//显示相应表单：建立表单
+//家具属性中，显示相应表单
 function updateFrom(){
+    //置空furnDefaultParam
+    furnDefaultParam={};
+    //置空家具属性表单
     furnForm.innerHTML='';
-    let furn=furnsData[curFurn];
+    let furn=furnsData[curFurnName];
     let furnFormData=furn.form;
     let fragment = '';
     for(let key in furnFormData){
@@ -197,6 +212,8 @@ function updateFrom(){
 }
 //根据不同的类型，建立不同的输入框
 function furnInp(param,key){
+    //前端数据和图形数据相互补全
+    furnDefaultParam[key]=Tool.parseUnit(param.value);
     let fragment='';
     switch (param.inputType){
         case 'input':
@@ -238,6 +255,29 @@ function unactFurn(){
     }
 
 }
+//根据表单，建立绑定关系集合
+function setSubs(){
+    let inps=furnForm.getElementsByTagName('input');
+    Array.prototype.forEach.call(inps,(ele)=>{
+        let key=ele.getAttribute('name');
+        //绑定关系集合
+        mvvm.subs.push({dom:ele,value:ele.value,key:key});
+        //设置mvvm对象的代理键
+        mvvm.proxyKey(key);
+    });
+}
+//当前家具相关信息置空
+function clearCurFurnInfo(){
+    //当前家具，默认null
+    curFurnName=null;
+    //当前操作的input 节点
+    curInpDom=null;
+    //当前inp 值
+    inpVal=null;
+    //当前选择的家具节点
+    curFurnBtn=null;
+}
+
 
 /*..........表单方法..........*/
 //input 输入框的点击事件
@@ -245,6 +285,8 @@ function onPanelMousedown(event){
     if(hasClass(event.target,'liv-inp')){
         event.stopPropagation();
         if(livList.style.display==='block'&&curInpDom===event.target){
+            //如果下拉列表存在，且当前input 和现在点击的input 是同一个
+            //下拉列表隐藏
             livList.style.display='none';
         }else{
             curInpDom=event.target;
@@ -279,18 +321,9 @@ function onInputKeyup(event){
     if(inpVal===val){return}
     let valid=checkVal();
     if(valid){
-        //更新当前值
-        inpVal=val;
-        //下拉列表
-        normalSelection(inpVal);
+        onInputKeyupValid(val);
     }else{
-        //还原表单值
-        if(val===''){
-            curInpDom.value='';
-            normalSelection();
-        }else{
-            curInpDom.value=inpVal;
-        }
+        onInputKeyupUnvalid(val);
     }
 }
 //下拉列表不可手动输入
@@ -321,9 +354,11 @@ function onPropMousedown(event){
 function onListClick(event){
     let tar=event.target;
     if(curInpDom.value!==tar.innerHTML){
+        //输入框的值不等于option 的内容
         curInpDom.value=tar.innerHTML;
-        //如果是furnType 输入框
+
         if(curInpDom.getAttribute('id')==='furnType'){
+            //如果是furnType 的selection
             //将option 的value 赋予input
             curType=tar.getAttribute('value');
             curInpDom.setAttribute('key',curType);
@@ -331,6 +366,9 @@ function onListClick(event){
             updateFurnBtns();
             //置空furnForm
             furnForm.innerHTML='';
+        }else{
+            //如果是正常家具属性的selection
+            onFurnAttrChange(curInpDom.getAttribute('name'),curInpDom.value)
         }
     }
 
@@ -360,7 +398,7 @@ function furnTypeSelection(){
 function normalSelection(val=null){
     livList.innerHTML='';
     let fragment = '';
-    let dt=furnsData[curFurn].form[curInpDom.getAttribute('name')];
+    let dt=furnsData[curFurnName].form[curInpDom.getAttribute('name')];
     dt.list.forEach((ele)=>{
         let str=ele.toString();
         if(!val||str.includes(val)){
@@ -385,7 +423,7 @@ function showSelection(curInpDom){
 //测试数据有效性, 返回Boolean
 function checkVal(){
     let val=curInpDom.value;
-    let dt=furnsData[curFurn].form[curInpDom.getAttribute('name')];
+    let dt=furnsData[curFurnName].form[curInpDom.getAttribute('name')];
     let valid=true;
     if(dt.valType==='number'){
         //判断是否为number
@@ -407,6 +445,44 @@ function checkVal(){
     }
     return valid;
 }
+//键盘在input 型输入框抬起时，值有效
+function onInputKeyupValid(val){
+    //更新当前值
+    inpVal=val;
+    //显示下拉列表
+    normalSelection(inpVal);
+    //触发mvvm 事件
+    onFurnAttrChange(curInpDom.getAttribute('name'),val)
+    
+}
+//键盘在input 型输入框抬起时，值无效
+function onInputKeyupUnvalid(val){
+    //还原表单值
+    if(val===''){
+        //若值为空字符
+        //当前输入框的值就是空字符
+        curInpDom.value='';
+        //显示下拉列表
+        normalSelection();
+        //当change 时，会将输入框内容还原到缓存的有效值 inpVal
+    }else{
+        //非字符串的空
+        //将输入框内容还原到缓存的有效值 inpVal
+        curInpDom.value=inpVal;
+    }
+}
+//家具属性表单值改变的情况，值是被验证过的有效值
+//触发事件：selection 下拉列表的单击；input 键盘抬起后的有效数据
+function onFurnAttrChange(key,val) {
+    mvvm[key]=val;
+    if(webglPart.transCtrl2.crting){
+        console.log('transformNeedUpdateOnMove');
+        webglPart.transCtrl2.transformNeedUpdateOnMove=true;
+    }else{
+        webglPart.transCtrl2.updateTransformAttrByObj();
+    }
+    webglPart.render();
+}
 
 /*..........页面方法..........*/
 //设置dom 高度自适应
@@ -427,6 +503,7 @@ function onDragArrowClick(){
 }
 
 /*..........常用方法..........*/
+
 /* 参数相关 */
 function sizeParam(param){
     let def={

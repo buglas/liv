@@ -1,4 +1,4 @@
-/*
+ /*
 * 分体厅柜-地台
 * */
 import {BoxBufferGeometry,RepeatWrapping,MeshLambertMaterial,Mesh,Texture,ImageLoader,TextureLoader,MeshPhongMaterial} from 'three'
