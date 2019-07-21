@@ -127,8 +127,11 @@ export default class WebglPart{
             _this.render();
         } );
         //轨道控制器旋转实时监听变化
-        this.orbitCtrl.addEventListener( 'change', function(){
+        this.orbitCtrl.addEventListener( 'change', function(event){
             _this.transCtrl2.setScalar();
+            if(!_this.transCtrl2.axis){
+                //_this.transCtrl2.setDummyPosByObj();
+            }
             _this.render();
         });
         //针对在平面图中旋转相机时出现的正交相机，将视图切换为透视状态
@@ -174,7 +177,7 @@ export default class WebglPart{
     }
     //建立相机
     cameraP(){
-        let camera=new PerspectiveCamera(45,this.viewW/this.viewH,0.1,parseUnit(100000));
+        let camera=new PerspectiveCamera(30,this.viewW/this.viewH,0.1,parseUnit(100000));
         camera.position.copy(this.camerasPos['p'].clone());
         camera.lookAt(this.scene.position);
         camera.updateMatrixWorld();
@@ -257,6 +260,9 @@ export default class WebglPart{
     //切换视图
     changeView(v){
         //if(v===this.view){return}
+        if(v!==this.view){
+            this.transCtrl2.floatObj=null;
+        }
         //重置变换器信息
         this.view=v;
         this.cameras[this.view]=this.getCamera(this.view);
@@ -273,11 +279,7 @@ export default class WebglPart{
         //存储相机方向，用于正交平面转正交透视的判断
         this.camDir=this.getCamDir();
 
-        if(v==='p'){
-            console.log('1-objInitPos',this.transCtrl2.objInitPos);
-            //this.transCtrl2.setInitPlaneInPforY();
-            //console.log('2-objInitPos',this.transCtrl2.objInitPos);
-        }
+
 
         this.render();
     }

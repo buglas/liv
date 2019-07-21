@@ -4,6 +4,10 @@ body{
     background-color: #21293b;
     color: #c3c8d8;
     font-size: 12px;
+    -webkit-user-select:none;
+    -moz-user-select:none;
+    -ms-user-select:none;
+    user-select:none;
 }
 
 /*视图文字背景*/

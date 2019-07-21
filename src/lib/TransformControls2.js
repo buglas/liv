@@ -141,6 +141,10 @@ export default class TransformControls2 extends Group{
         //当鼠标在canvas 上移动时，是否需要更新一下边界和变换控制器。
         //应对当是crting 状态中当家具，通过表单更新属性后的鼠标定位错位问题
         this.transformNeedUpdateOnMove=false;
+        //相机到物体的缩放系数缓存
+        this.expandRad=0;
+        //虚拟物体的缩放系数
+        this.dummyBoundExpandScale=200;
         //初始化
         this.init();
     }
@@ -159,7 +163,7 @@ export default class TransformControls2 extends Group{
             //点击canvas 的事件冒泡，不要将事件传递给上方物体
             _this.mousedownFn(event);
         },true);
-        this.domElement.addEventListener('mouseup',function (event) {
+        window.addEventListener('mouseup',function (event) {
             if(!_this.enable){return}
             _this.mouseupFn(event);
         });
@@ -190,14 +194,7 @@ export default class TransformControls2 extends Group{
     mousedownFn(event){
         switch (event.buttons){
             case 1:
-                //鼠标左击
-                //识别家具在建状态
-                this.checkCrting();
-                //mousedownOfAxis 和mousedownOfFurn 是互斥的，前者优先
-                //鼠标点击在轴上
-                this.mousedownOfAxis(event);
-                //鼠标拖拽物体
-                this.mousedownOfFurn(event);
+                this.leftMouseDownFn(event);
                 break
         }
 
@@ -220,16 +217,14 @@ export default class TransformControls2 extends Group{
                 this.updateMouseAttrByObj();
                 //根据物体更新与其绑定的变换信息
                 this.updateTransformAttrByObj();
-
             }
-            //恒定控制器大小
-            this.setScalar();
             //检测碰撞
             this.checkCrash();
             //移动物体
             this.moveObj(event);
+            //恒定控制器大小
+            this.setScalar();
             //需渲染
-            //this.events['change']();
             this.change();
 
         }else if (this.hoverEnable){
@@ -239,23 +234,13 @@ export default class TransformControls2 extends Group{
         }
     }
 
-    //识别家具在建状态
-    checkCrting(){
-        //当正在创建家具时，当前鼠标没有按下左键，但存在curSelectedObj
-        //鼠标但点击直接放下物体，取消选择
-        //启用orbit
-        if(this.crting){
-            this.crting=false;
-            //还得更新一下平面
-
-            //家具建立完成事件，前端页面里的家具按钮可以取消选择态
-            this.crted();
-        }
-    }
-    //鼠标点击在轴上
-    mousedownOfAxis(event){
+    //鼠标左击
+    leftMouseDownFn(event){
+        //鼠标左击
+        //识别家具在建状态
+        this.checkCrting();
         if(this.object){
-            //.object 存在,说明可以拖拽轴
+            //.object 存在,则有拖拽轴
             //若.axis 不为空，就将其置空。（切断）
             //控制器是否发生改变
             if(this.axis){
@@ -263,68 +248,75 @@ export default class TransformControls2 extends Group{
                 this.setAxis(null);
                 this.change();
             }
-            //记录拖拽形态
-            this.dragState='axis';
-            //▷ 在操作轴里，获取选择对象
+            //▷ 在操作轴里，获取选择对象。默认遍历集合是操作轴。
             let curSelected=this.getIntersectObject(event);
             if(curSelected){
-                //选择了操作轴
-                //根据底部子级，获取其对应的指定集合里的元素
-                this.setAxis(curSelected.object.name[0]);
-                //如果当前视图为'p',轴为'y'，切换this.plan
-                if(this.view==='p'){
-                    if(this.axis==='y'){
-                        this.setInitPlaneInPforY();
-                    }else{
-                        this.setInitPlane();
-                    }
-
-                }
-                //设置鼠标和相关物体的偏移距离
-                this.setMouseSubSmth(event);
-                //启动拖拽事件
-                this.draggingChanged(true);
-
-                this.change();
+                //鼠标点击在轴上
+                this.mousedownOfAxis(event,curSelected);
+            }
+        }
+        //如果没有选择轴
+        if(!this.axis){
+            let curSelectedObj=this.getIntersectObject(event,this.selectableFurns);
+            if(curSelectedObj){
+                this.mousedownOfFurn(event,curSelectedObj);
+            }else{
+                this.dragState=null;
+                this.clickTime=new Date();
             }
         }
     }
+    //识别家具在建状态
+    checkCrting(){
+        //当正在创建家具时，当前鼠标没有按下左键，但存在curSelectedObj
+        //鼠标但点击直接放下物体，取消选择
+        //启用orbit
+        if(this.crting){
+            this.crting=false;
+            //家具建立完成事件，前端页面里的家具按钮可以取消选择态
+            this.crted();
+        }
+    }
+    //鼠标点击在轴上
+    mousedownOfAxis(event,curSelected){
+        //记录拖拽形态
+        this.dragState='axis';
+        //设置当前操作的轴axis
+        //根据底部子级，获取其对应的指定集合里的元素
+        this.setAxis(curSelected.object.name[0]);
+        //透视图中，根据当前的拖拽轴切换平面
+        //在其它视图，平面会直接在init 里初始化
+        this.changePlaneInP();
+        //设置鼠标和相关物体的偏移距离
+        this.setMouseSubSmth(event);
+        //启动拖拽事件
+        this.draggingChanged(true);
+        this.change();
+    }
     //鼠标点击在家具上,即拖拽家具的情况
-    mousedownOfFurn(event){
-        if (this.axis){return;}
+    mousedownOfFurn(event,curSelected){
         //记录拖拽形态
         this.dragState='object';
-        //获取选择的对象
-        let curSelectedObj=this.getIntersectObject(event,this.selectableFurns);
-        if(curSelectedObj){
-            //存在选择的物体
-            //启动拖拽事件
-            //this.events['dragging-changed']({value:true});
-            this.draggingChanged(true);
-            //针对透视图，切换this.plane 为水平面
-            /*if(this.view==='p'){
-                this.setInitPlane();
-            }*/
-
-            //获取包涵当前选择对象的的可选择物体
-            let sceneChild=this.getParentInArray(curSelectedObj.object,this.selectableFurns);
-            //选择对象
-            this.selectObj(sceneChild);
-
-            //设置拖拽轴
-            this.setDragAxisByView();
-            //设置鼠标和相关物体的偏移距离
-            this.setMouseSubSmth(event);
-        }else{
-            //记下鼠标按下的事件，等鼠标抬起时，根据此事件判断是否取消选择
-            this.clickTime=new Date();
-
+        //存在选择的物体
+        //启动拖拽事件
+        this.draggingChanged(true);
+        //针对透视图，切换this.plane 为水平面
+        if(this.view==='p'){
+            this.setInitPlane();
         }
-
+        //获取包涵当前选择对象的的可选择物体
+        let sceneChild=this.getParentInArray(curSelected.object,this.selectableFurns);
+        //选择对象
+        this.selectObj(sceneChild);
+        //设置拖拽轴
+        this.setDragAxisByView();
+        //设置鼠标和相关物体的偏移距离
+        this.setMouseSubSmth(event);
     }
     //鼠标抬起时，处于拖拽状态
     mouseupOfAxis(event){
         if(this.axis){
+            console.log('mouseupOfAxis');
             //只要选择了轴，在鼠标抬起时
             //取消轴选择
             if(this.dragState!=='axis'){
@@ -402,6 +394,16 @@ export default class TransformControls2 extends Group{
             this.change();
         }
     }
+    //透视图中，根据当前的拖拽轴切换平面
+    changePlaneInP(){
+        if(this.view==='p'){
+            if(this.axis==='y'){
+                this.setInitPlaneInPforY();
+            }else{
+                this.setInitPlane();
+            }
+        }
+    }
 
     //设置鼠标和相关物体的偏移距离
     setMouseSubSmth(event){
@@ -472,7 +474,6 @@ export default class TransformControls2 extends Group{
         this.setObjFloatPos()
         //获取鼠标在平面上的焦点
         let focus=this.getFocus();
-
         //若鼠标点击的位置在视平线以上，相机到鼠标的射线是不会和地面产生焦点的
         if(focus){
             //所选物体和控制轴可见
@@ -507,9 +508,11 @@ export default class TransformControls2 extends Group{
             //物体浮动
             this.object.position[planeAxis]=objPos;
             //重置虚拟盒子位置
-            this.setDummyPosByObj();
+            //this.setDummyPosByObj();
             //重置控制器位置
-            this.transform.position[planeAxis]=objPos+this.transSubObj[planeAxis];
+            //this.transform.position[planeAxis]=objPos+this.transSubObj[planeAxis];
+            console.log('floatChange');
+            this.updateTransformAttrByObj();
             this.floatObj=floatObj;
         }
     }
@@ -717,8 +720,6 @@ export default class TransformControls2 extends Group{
         this.deleteCrashableObj(object);
         //根据物体更新与其绑定的变换信息
         this.updateTransformAttrByObj();
-
-
     }
     //分离
     detach(){
@@ -787,9 +788,10 @@ export default class TransformControls2 extends Group{
         //建立虚拟盒子
         let box3=new Box3();
         box3.setFromObject(this.object);
-        box3.expandByScalar(.001);
+        box3.expandByScalar(this.cameraToObjectRad()/this.dummyBoundExpandScale);
         this.dummyBound.box=box3;
     }
+
     //存储虚拟物体的尺寸
     saveDummySize(){
         let whd=new Vector3();
@@ -970,16 +972,33 @@ export default class TransformControls2 extends Group{
 
     }
     setScalar(){
+        let rad=this.cameraToObjectRad();
+        if(this.expandRad===rad){return}
+        this.transform.scale.set( 1, 1, 1 ).multiplyScalar(rad);
+        let box=this.dummyBound.box;
+        if(box){
+            //存在虚拟盒子
+            //先缩回去
+            box.expandByScalar(-this.expandRad/this.dummyBoundExpandScale);
+            //再重新放大
+            box.expandByScalar(rad/this.dummyBoundExpandScale);
+        }
+        this.expandRad=rad;
+
+    }
+    //获取相机到物体的恒定比
+    cameraToObjectRad(){
         let worldPosition=new Vector3();
         worldPosition=this.transform.getWorldPosition(worldPosition);
         let zoom=this.camera.zoom;
         let eyeDistance = worldPosition.distanceTo( this.camera.position);
-        //判断相机类型
+        let rad=null;
         if(this.camera.isPerspectiveCamera){
-            this.transform.scale.set( 1, 1, 1 ).multiplyScalar( eyeDistance * this.size / 7 );
+            rad=eyeDistance * this.size / 7;
         }else{
-            this.transform.scale.set( 1, 1, 1 ).multiplyScalar( 130/zoom);
+            rad=100/zoom;
         }
+        return rad;
     }
 
     /*与轴无关的东东*/
