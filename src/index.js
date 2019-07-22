@@ -1,14 +1,13 @@
 import WebglPart from '@/front/WebglPart'
 import Mvvm from '@/front/Mvvm'
 import Tool from '@/com/Tool'
+import Mats from "@/com/Mats"
 
 //全局对象
 //图形相关的部分
-let webglPart=new WebglPart(document.getElementById('view'));
+const webglPart=new WebglPart(document.getElementById('view'));
 //双向绑定器
-let mvvm=new Mvvm({webglPart});
-//家具默认参数
-let furnDefaultParam={};
+const mvvm=new Mvvm({webglPart});
 
 //家具类型
 const furnTypes={
@@ -16,6 +15,7 @@ const furnTypes={
     fttg:{text:'分体厅柜',chidren:['Ditai','Digui']},
     zttg:{text:'整体厅柜',chidren:['Ditai']}
 };
+
 //所有家具数据
 const furnsData={
     //地柜
@@ -55,7 +55,7 @@ const furnsData={
             }),
             height:sizeParam({
                 label:'高度',
-                value:28,
+                value:30,
                 list:[30,50,100],
             }),
             depth:sizeParam({
@@ -63,10 +63,17 @@ const furnsData={
                 value:322,
                 list:[322,418,610],
             }),
+            taiMat:matParam({
+                value:'pingGuo',
+                label:'台面材质',
+                list:['huTao','pingGuo'],
+            })
         }
     },
 };
 
+//家具默认参数,furnsData 中解析出来
+let furnDefaultParam={};
 
 //当前家具类型
 let curType='fttg';
@@ -165,9 +172,10 @@ function initWebglPart(){
         //取消当前按钮的激活
         unactFurn();
         //当前家具相关信息置空
-        //clearCurFurnInfo();
-        
+        clearCurFurnInfo();
     })
+    //添加一个家具取消选择的方法，置空livList
+
 }
 
 /*..........家具方法..........*/
@@ -206,14 +214,28 @@ function updateFrom(){
     let furnFormData=furn.form;
     let fragment = '';
     for(let key in furnFormData){
-        fragment+=furnInp(furnFormData[key],key);
+        //补全默认数据
+        let param=furnFormData[key];
+        furnDefaultParam[key]=parseFurnParam(param.valType,param.value);
+        //补全节点
+        fragment+=furnInp(param,key);
     }
     furnForm.innerHTML=fragment;
+}
+//解析输入框数据
+function parseFurnParam(valType,val){
+    switch (valType){
+        case 'number':
+            return Tool.parseUnit(val);
+            break;
+        default:
+            return val;
+    }
 }
 //根据不同的类型，建立不同的输入框
 function furnInp(param,key){
     //前端数据和图形数据相互补全
-    furnDefaultParam[key]=Tool.parseUnit(param.value);
+    //furnDefaultParam[key]=Tool.parseUnit(param.value);
     let fragment='';
     switch (param.inputType){
         case 'input':
@@ -221,7 +243,8 @@ function furnInp(param,key){
                 <div class="liv-group">
                     <label class="liv-lab">${param.label}</label>
                     <input class="liv-inp liv-input" 
-                            mold="input" 
+                            data-mold="input" 
+                            data-valtype="${param.valType}" 
                             type="text" 
                             name="${key}" 
                             value="${param.value}"
@@ -233,12 +256,14 @@ function furnInp(param,key){
             fragment=`
                 <div class="liv-group">
                     <label class="liv-lab">${param.label}</label>
-                    <div class="liv-inp-wraper liv-selection">
+                    <div class="liv-inp-wraper">
                         <input class="liv-inp liv-selection"
-                                mold="selection"
+                                data-mold="selection"
+                                data-valtype="${param.valType}"
                                 type="text"
                                 name="${key}"
-                                value="${param.value}">
+                                data-value="${param.value}"
+                                value="${param.list[param.value].text}">
                         <img class="liv-down" src="images/down.svg">
                     </div>
                 </div>
@@ -269,7 +294,9 @@ function setSubs(){
 //当前家具相关信息置空
 function clearCurFurnInfo(){
     //当前家具，默认null
-    curFurnName=null;
+    //点击家具按钮时，curFurnName 是家具按钮的名称
+    //选择物体时，curFurnName 是所选物体的name
+    //curFurnName=null;
     //当前操作的input 节点
     curInpDom=null;
     //当前inp 值
@@ -277,7 +304,24 @@ function clearCurFurnInfo(){
     //当前选择的家具节点
     curFurnBtn=null;
 }
-
+//解析下拉列表数据的value，获取其显示在文本款里的正确文字
+function parseValue(param){
+    if(typeof param.list[0]==='object'){
+        return findAByB(param.list,'text','value',param.value);
+    }else{
+        return param.value;
+    }
+}
+function findAByB(list,a,b,value){
+    let res='';
+    for(let option of list){
+        if(option[b]===value){
+            res=option[a];
+            break
+        }
+    }
+    return res;
+}
 
 /*..........表单方法..........*/
 //input 输入框的点击事件
@@ -307,10 +351,12 @@ function onPanelKeydown(event){
 }
 //面板的键盘抬起
 function onPanelKeyup(event){
-    if(hasClass(event.target,'liv-input')){
+    if(!curInpDom){return}
+    let mold=event.target.getAttribute('data-mold');
+    if(mold==='input'){
         //手动输入框
         onInputKeyup(event);
-    }else if(hasClass(event.target,'liv-selection')){
+    }else if(mold==='selection'){
         //下拉列表的输入框的键盘抬起
         onSelectionKeyup(event);
     }
@@ -320,10 +366,12 @@ function onInputKeyup(event){
     let val=curInpDom.value;
     if(inpVal===val){return}
     let valid=checkVal();
-    if(valid){
+    console.log('valid',valid);
+    if(valid.value){
+        console.log('val',val);
         onInputKeyupValid(val);
     }else{
-        onInputKeyupUnvalid(val);
+        //onInputKeyupUnvalid(val);
     }
 }
 //下拉列表不可手动输入
@@ -332,13 +380,11 @@ function onSelectionKeyup(event){
 }
 //面板中input 的change
 function onPanelChange(event){
-    if(hasClass(event.target,'liv-input')){
+    if(event.target.getAttribute('data-mold')==='input'){
         //input 输入框手动输入,change 后,判断有效性
-        if(!checkVal()){
+        if(!checkVal().value){
             curInpDom.value=inpVal;
         }
-        //input 输入框 改变后，改变家具尺寸
-
     }
 }
 //其它地方点击
@@ -356,57 +402,57 @@ function onListClick(event){
     if(curInpDom.value!==tar.innerHTML){
         //输入框的值不等于option 的内容
         curInpDom.value=tar.innerHTML;
-
+        curInpDom.setAttribute('data-value',tar.getAttribute('data-value'));
         if(curInpDom.getAttribute('id')==='furnType'){
-            //如果是furnType 的selection
-            //将option 的value 赋予input
-            curType=tar.getAttribute('value');
-            curInpDom.setAttribute('key',curType);
             //初始化furns
             updateFurnBtns();
             //置空furnForm
             furnForm.innerHTML='';
         }else{
             //如果是正常家具属性的selection
-            onFurnAttrChange(curInpDom.getAttribute('name'),curInpDom.value)
+            //触发mvvm 事件
+            dispachFromInp();
         }
     }
-
-
     livList.style.display='none';
+}
+//从表单里解析数据
+function dispachFromInp(){
+    let name=curInpDom.getAttribute('name');
+    //数据类型，用于数据解析
+    let valtype=curInpDom.getAttribute('data-valtype');
+    //selection 情况下与中文text 对应的键
+    let dataValue=curInpDom.getAttribute('data-value');
+    //针对input和selection 的值进行取舍判断
+    let furnVal=dataValue?dataValue:curInpDom.value;
+    //let val=parseFurnParam(valtype,curInpDom.value);
+    let val=parseFurnParam(valtype,furnVal);
+
+    onFurnAttrChange(name,val);
 }
 //设置下拉列表内容
 function setSelectionCont(){
     let name=curInpDom.getAttribute('name');
     if(name==='furnType'){
-        furnTypeSelection();
+        crtList(furnTypes);
     }else{
-        normalSelection();
+        crtList(getCurFurnAttrList());
     }
 }
-//家具类型下拉列表
-function furnTypeSelection(){
+
+//建立list
+function crtList(list){
     livList.innerHTML='';
     let fragment = '';
-    for(let key in furnTypes){
-        let option=`<div class="option" value="${key}">${furnTypes[key].text}</div>`;
+    for(let key in list){
+        let option=`<div class="option" data-value="${key}">${list[key].text}</div>`;
         fragment+=option;
     }
     livList.innerHTML=fragment;
 }
-//家具属性下拉列表
-function normalSelection(val=null){
-    livList.innerHTML='';
-    let fragment = '';
-    let dt=furnsData[curFurnName].form[curInpDom.getAttribute('name')];
-    dt.list.forEach((ele)=>{
-        let str=ele.toString();
-        if(!val||str.includes(val)){
-            let option=`<div class="option">${ele}</div>`;
-            fragment+=option;
-        }
-    })
-    livList.innerHTML=fragment;
+//获取当前家具属性的list
+function getCurFurnAttrList(){
+    return furnsData[curFurnName].form[curInpDom.getAttribute('name')].list;
 }
 //显示下拉列表
 function showSelection(curInpDom){
@@ -424,7 +470,10 @@ function showSelection(curInpDom){
 function checkVal(){
     let val=curInpDom.value;
     let dt=furnsData[curFurnName].form[curInpDom.getAttribute('name')];
-    let valid=true;
+    //value：是否有效
+    //其余的：犯了哪种错
+    //{value:boolean,,max:boolean,min:boolean,type,reg}
+    let valid={value:true,max:false,min:false,type:false,reg:false};
     if(dt.valType==='number'){
         //判断是否为number
         //有理数
@@ -432,16 +481,22 @@ function checkVal(){
         if(rational.test(val)){
             //是数字
             let num=parseFloat(val);
-            if(dt.min!==undefined &&num<dt.min||dt.max!==undefined&&num>dt.max){
-                valid=false;
+            if(dt.min!==undefined &&num<dt.min){
+                valid.value=false;
+                valid.min=true;
+            }else if(dt.max!==undefined&&num>dt.max){
+                valid.value=false;
+                valid.max=true;
             }
         }else{
-            valid=false;
+            valid.value=false;
+            valid.type=true;
         }
     }
     //正则验证
     if(dt.reg&&!dt.reg.test(val)){
-        valid=false;
+        valid.value=false;
+        valid.reg=true;
     }
     return valid;
 }
@@ -449,10 +504,11 @@ function checkVal(){
 function onInputKeyupValid(val){
     //更新当前值
     inpVal=val;
+    curInpDom.setAttribute('data-value',val);
     //显示下拉列表
-    normalSelection(inpVal);
+    crtList(getCurFurnAttrList());
     //触发mvvm 事件
-    onFurnAttrChange(curInpDom.getAttribute('name'),val)
+    dispachFromInp();
     
 }
 //键盘在input 型输入框抬起时，值无效
@@ -463,7 +519,8 @@ function onInputKeyupUnvalid(val){
         //当前输入框的值就是空字符
         curInpDom.value='';
         //显示下拉列表
-        normalSelection();
+        //normalSelection();
+        crtList(getCurFurnAttrList());
         //当change 时，会将输入框内容还原到缓存的有效值 inpVal
     }else{
         //非字符串的空
@@ -475,8 +532,8 @@ function onInputKeyupUnvalid(val){
 //触发事件：selection 下拉列表的单击；input 键盘抬起后的有效数据
 function onFurnAttrChange(key,val) {
     mvvm[key]=val;
+    //虚拟边界的更新
     if(webglPart.transCtrl2.crting){
-        console.log('transformNeedUpdateOnMove');
         webglPart.transCtrl2.transformNeedUpdateOnMove=true;
     }else{
         webglPart.transCtrl2.updateTransformAttrByObj();
@@ -494,7 +551,6 @@ function onWinResize(){
 }
 //生成面板的折叠
 function onDragArrowClick(){
-    console.log('www');
     if(panelCrtWrapper.getAttribute('class')==='fold'){
         panelCrtWrapper.setAttribute('class','');
     }else{
@@ -510,7 +566,7 @@ function sizeParam(param){
         //默认值
         value:30,
         //标签
-        label:'宽度',
+        label:'尺寸标签',
         //定制选项
         list:[400,600,900,1200,1350,1500,1650,1800],
         //输入框类型，selection
@@ -520,16 +576,16 @@ function sizeParam(param){
         //正则，正整数
         reg:/^[1-9]\d*$/,
         //最小值
-        min:0,
+        min:30,
         //最大值
-        max:2112,
-        //对应的dom 节点
-        dom:null,
-        //宽度改变时的
-        chuange:function(){
-
-        }
+        max:2112
     }
+    let newList={};
+    param.list.forEach((num)=>{
+        num=num.toString();
+        newList[num]={text:num}
+    })
+    param.list=newList;
     for(let key in param){
         def[key]=param[key];
     }
@@ -538,6 +594,31 @@ function sizeParam(param){
 function posParam(){
 
 }
+function matParam(param){
+    let def={
+        //默认值
+        value:'huTao',
+        //标签
+        label:'材质标签',
+        //定制选项
+        list:['huTao','pingGuo'],
+        //输入框类型，selection
+        inputType:'selection',
+        //数据类型，应对手动输入的input 状态
+        valType:'string'
+    }
+    //加工list
+    let newList={};
+    param.list.forEach((str)=>{
+        newList[str]={text:Mats[str].text}
+    })
+    param.list=newList;
+    for(let key in param){
+        def[key]=param[key];
+    }
+    return def;
+}
+
 /* 节点相关 */
 //查找父级，根据class
 function findNode(target,root,val,attr='class'){

@@ -8,6 +8,7 @@ import Mats from '@/com/Mats'
 import Tool from "@/com/Tool";
 const {parseUnit}=Tool;
 
+let tar;
 export default class WebglPart{
     constructor(viewDom){
         //键盘按键的意义
@@ -32,28 +33,34 @@ export default class WebglPart{
 
         //场景
         this.scene=new Scene();
-        //相机集合
-        this.cameras=null;
+        //当前相机
+        this.camera=null;
         //变换控制器
         this.transCtrl2=null;
         //轨道控制器
         this.orbitCtrl = null;
-        //相机默认位置
-        this.camerasPos={
-          p:new Vector3(parseUnit(1000),parseUnit(1200),parseUnit(2000)),
-          f:new Vector3(parseUnit(0),parseUnit(0),parseUnit(5000)),
-          t:new Vector3(parseUnit(0),parseUnit(5000),parseUnit(0)),
-          l:new Vector3(parseUnit(5000),parseUnit(0),parseUnit(0)),
+        //相机数据
+        this.camerasAttr={
+          p:{
+              cameraPos:new Vector3(parseUnit(1000),parseUnit(1200),parseUnit(2000)),
+              targetPos:this.scene.position,
+          },
+          f:{
+              cameraPos:new Vector3(parseUnit(0),parseUnit(0),parseUnit(5000)),
+              targetPos:this.scene.position,
+              zoom:500,
+          },
+          t:{
+              cameraPos:new Vector3(parseUnit(0),parseUnit(5000),parseUnit(0)),
+              targetPos:this.scene.position,
+              zoom:500,
+          },
+          l:{
+              cameraPos:new Vector3(parseUnit(5000),parseUnit(0),parseUnit(0)),
+              targetPos:this.scene.position,
+              zoom:500,
+          },
         };
-
-        //事件
-        this.events={
-            //开始建立家具
-            //'crt':()=>{},
-            //家具的完成建立
-            'crted':()=>{},
-        }
-        //this.init();
     }
     init(){
         //容器尺寸
@@ -63,18 +70,13 @@ export default class WebglPart{
         this.initRenderer();
         //场景
         this.scene=new Scene();
-        //相机集合
-        this.cameras={
-            p:this.getCamera('p'),
-            f:this.getCamera('f'),
-            t:this.getCamera('t'),
-            l:this.getCamera('l'),
-        };
+
+        this.camera=this.getCamera('p');
         //变换控制器
-        this.transCtrl2=new TransformControls2(this.cameras[this.view],this.domElement);
+        this.transCtrl2=new TransformControls2(this.camera,this.domElement);
         this.scene.add(this.transCtrl2);
         //轨道控制器
-        this.orbitCtrl = new OrbitControls(this.cameras[this.view],this.domElement);
+        this.orbitCtrl = new OrbitControls(this.camera,this.domElement);
         //建立辅助物体
         this.crtHelpObj();
         //初始化光
@@ -160,14 +162,13 @@ export default class WebglPart{
         boxMesh.translateY(.1);
         boxMesh.receiveShadow=true;
         this.scene.add(boxMesh);
-        this.transCtrl2.machine(boxMesh,false);
-        this.transCtrl2.attach(boxMesh);
-
+        //machine(可选对象，是否可吸附)
+        this.transCtrl2.machine(boxMesh,true);
+        /*this.transCtrl2.attach(boxMesh);
         let axesHelper = new AxesHelper(20);
         axesHelper.translateY(.001);
-        this.scene.add(axesHelper);
+        this.scene.add(axesHelper);*/
     }
-
     getCamera(key){
         if(key==='p'){
             return this.cameraP();
@@ -178,8 +179,8 @@ export default class WebglPart{
     //建立相机
     cameraP(){
         let camera=new PerspectiveCamera(30,this.viewW/this.viewH,0.1,parseUnit(100000));
-        camera.position.copy(this.camerasPos['p'].clone());
-        camera.lookAt(this.scene.position);
+        camera.position.copy(this.camerasAttr['p'].cameraPos.clone());
+        camera.lookAt(this.camerasAttr['p'].targetPos.clone());
         camera.updateMatrixWorld();
         this.scene.add( camera );
         return camera;
@@ -198,8 +199,9 @@ export default class WebglPart{
     crtOrth(key){
         let {viewW,viewH}=this;
         let camera = new OrthographicCamera( viewW / - 2, viewW / 2, viewH / 2, viewH / - 2, 0, parseUnit(100000));
+
+        camera.position.copy(this.camerasAttr[key].cameraPos.clone());
         camera.zoom=500;
-        camera.position.copy(this.camerasPos[key].clone());
         camera.updateProjectionMatrix();
         this.scene.add( camera );
         return camera;
@@ -207,12 +209,12 @@ export default class WebglPart{
     //获取相机方向
     getCamDir(){
         let dir=new Vector3();
-        dir=this.cameras[this.view].getWorldDirection(dir);
+        dir=this.camera.getWorldDirection(dir);
         return dir;
     }
     //渲染
     render() {
-        this.renderer.render(this.scene, this.cameras[this.view]);
+        this.renderer.render(this.scene, this.camera);
     }
 
     /*.......事件相关........*/
@@ -230,8 +232,8 @@ export default class WebglPart{
     onWindowResize(event){
         this.viewW=this.viewDom.clientWidth;
         this.viewH=this.viewDom.clientHeight;
-        this.cameras[this.view].aspect = this.viewW/this.viewH;
-        this.cameras[this.view].updateProjectionMatrix();
+        this.camera.aspect = this.viewW/this.viewH;
+        this.camera.updateProjectionMatrix();
         this.renderer.setSize( this.viewW, this.viewH );
         this.render();
     }
@@ -259,16 +261,16 @@ export default class WebglPart{
 
     //切换视图
     changeView(v){
-        //if(v===this.view){return}
-        if(v!==this.view){
-            this.transCtrl2.floatObj=null;
-        }
+        if(v===this.view){return}
+        //浮动物体置空，以应对切换视图后，一拖拽就进行浮动检测
+        //this.transCtrl2.floatObj=null;
+
         //重置变换器信息
         this.view=v;
-        this.cameras[this.view]=this.getCamera(this.view);
-        this.orbitCtrl = new OrbitControls(this.cameras[this.view],this.domElement);
+        this.camera=this.getCamera(this.view);
+        this.orbitCtrl = new OrbitControls(this.camera,this.domElement);
         this.transCtrl2.view=v;
-        this.transCtrl2.camera=this.cameras[this.view];
+        this.transCtrl2.camera=this.camera;
         this.transCtrl2.setScalar();
         this.transCtrl2.setInitPlane();
         if(v==='f'||v==='l'){
@@ -278,12 +280,13 @@ export default class WebglPart{
         }
         //存储相机方向，用于正交平面转正交透视的判断
         this.camDir=this.getCamDir();
-
-
-
         this.render();
     }
-
+    //根据视图和目标对象，设置相机位置
+    setCameraPosByObj(){
+        let obj=this.transCtrl2.object;
+        if(!obj){return}
+    }
     //建立家具
     crtFurn(furnName,param=null){
         let transCtrl2=this.transCtrl2;
@@ -296,10 +299,13 @@ export default class WebglPart{
         }
         //建立地台
         //.6,.03,.322
-        let [w,h,d]=[.6,.03,.322];
-        //let diTai=new DiTai(w,h,d,Mats.huTao,Mats.lvMoSha);
         let diTai=new DiTai(param);
         diTai.visible=false;
+        let _this=this;
+        diTai.addEventListener('map-loaded',function(){
+            console.log('-------map-loaded');
+            _this.render();
+        });
         this.scene.add(diTai);
         //应该把新建对象也合到此方法里
         transCtrl2.attach(diTai);
@@ -308,6 +314,8 @@ export default class WebglPart{
         transCtrl2.setDragAxisByView();
         //根据物体，设置鼠标与其它点位的位置关系
         transCtrl2.updateMouseAttrByObj();
+        transCtrl2.setInitPlane();
+        console.log('----plane',transCtrl2.plane);
         if(transCtrl2.view==='p'){
             diTai.visible=false;
             transCtrl2.visible=false;

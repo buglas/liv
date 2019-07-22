@@ -1,15 +1,15 @@
  /*
 * 分体厅柜-地台
 * */
-import {BoxBufferGeometry,RepeatWrapping,MeshLambertMaterial,Mesh,Texture,ImageLoader,TextureLoader,MeshPhongMaterial} from 'three'
+import {BoxBufferGeometry,RepeatWrapping,MeshLambertMaterial,Mesh,Texture,ImageLoader,TextureLoader,MeshPhongMaterial,Matrix4} from 'three'
 
 /*
 * matParam:
-* 正常的Material 参数
-* mapParam 贴图参数{
-* imgSrc:图片链接
 * matType: 材质类型
-* size:默认null，不进行贴图重复设置，可以使num，或者[numS,numT]
+* map 贴图参数
+* mapParam 贴图参数{
+*   imgSrc:图片链接
+*   size:默认null，不进行贴图重复设置，即充满面，可以使num，或者[numS,numT]
 * }
 * type 贴图的布局方式，默认自动布局
 * */
@@ -23,7 +23,8 @@ export default class BoxMesh extends Mesh{
         this.h=h;
         this.d=d;
         //若非数组转数组，无贴图除外
-        this.matParam=this.setMatParam(matParam);
+        this.matParam=null;
+        //默认为null，会根据尺寸自动识别
         this.type=type;
         //是否自动变换类型
         this.autoType=type?false:true;
@@ -33,24 +34,42 @@ export default class BoxMesh extends Mesh{
             MeshLambertMaterial,
             MeshPhongMaterial
         };
-        this.render=function(){}; //贴图加载成功
-        this.init();
+        //默认接收和产生阴影
+        this.castShadow=true;
+        this.receiveShadow=true;
+        //待加载的贴图数量
+        this.mapNum=0;
+        //贴图加载成功的次数
+        this.mapLoadNum=0;
+        //是否可以渲染
+        this.renderable=false;
+        //贴图是否在加载
+        this.mapLoading=false;
+        //虚拟材质
+        this.dummyMat=null;
+        //忽略的材质属性
+        this.ignoreAttr=['matType','mapParam','text'];
+        //初始化
+        this.init(matParam);
     }
-    init(){
+    init(matParam){
+        //建立顶点模型
         this.geoUpdate();
         //判断一下状态，若为null 就自动判断
         this.setType();
         //需要旋转的索引
         this.rotateInds=this.getRotateInds();
+        //若非数组转数组，无贴图除外
+        /*this.matParam=this.setMatParam(matParam);
         //先判断贴图参数是否为数组
         if(this.matParam.constructor===Array){
             this.material=this.getMatByMult();
         }else{
             this.material=this.newMat(this.matParam);
-        }
-        //默认接收和产生阴影
-        this.castShadow=true;
-        this.receiveShadow=true;
+        }*/
+        //设置材质
+        this.setMaterial(matParam);
+
     }
 
     setW(w){
@@ -71,15 +90,29 @@ export default class BoxMesh extends Mesh{
         this.d=d;
         this.updateBySize();
     }
+    //设置材质
     setMaterial(matParam){
+        //重置贴图渲染数据
+        this.updateRenderData();
+        //材质设置
         this.matParam=this.setMatParam(matParam);
         //设置材质
         //先判断贴图参数,是否为数组.注意带有贴图的单个mat 已经被加工成数组了
         if(this.matParam.constructor===Array){
-            this.material=this.getMatByMult();
+            this.setMapNum();
+            this.dummyMat=this.getMatByMult();
         }else{
-            this.material=this.newMat(this.matParam);
+            this.mapNum=1;
+            this.dummyMat=this.newMat(this.matParam);
         }
+        if(this.mapNum===0){
+            this.material=this.dummyMat;
+        }else{
+            this.material=this.newMat({color:0xffffff});
+        }
+    }
+    getMaterial(matParam){
+
     }
     //设置材质参数，单个变数组，单个且单色不考虑
     setMatParam(matParam){
@@ -99,7 +132,7 @@ export default class BoxMesh extends Mesh{
         }
     }
     updateBySize(){
-        //更新模型
+        //建立模型，并更新
         this.geoUpdate();
         //更新状态
         this.setType();
@@ -121,11 +154,18 @@ export default class BoxMesh extends Mesh{
             }
         }
     }
-
+    //建立顶点模型
     geoUpdate(){
         const {w,h,d}=this;
         this.geometry=new BoxBufferGeometry(w,h,d);
+        //模型基点定位
         if(this.org==='lbc'){
+            let m = new Matrix4();
+            m.makeTranslation(w/2,h/2,d/2);
+            m.applyToBufferAttribute(this.geometry.attributes.position);
+        }
+        //模型基点定位
+        /*if(this.org==='lbc'){
             let array=this.geometry.attributes.position.array;
             array.forEach(function(ele,ind){
                 if(ind%3===0){
@@ -134,8 +174,9 @@ export default class BoxMesh extends Mesh{
                     array[ind+2]+=d/2;
                 }
             });
-        }
+        }*/
     }
+    //设置贴图的纵横类型
     setType(){
         if(this.autoType){
             this.type=this.getType();
@@ -187,6 +228,15 @@ export default class BoxMesh extends Mesh{
             case '312':
                 return [];
                 break;
+        }
+    }
+    //设置贴图数量
+    setMapNum(){
+        let matParam=this.matParam;
+        for(let i=0;i<6;i++){
+            if(matParam[i]&&matParam[i].mapParam){
+                this.mapNum++;
+            }
         }
     }
     //根据数组获取材质
@@ -285,21 +335,23 @@ export default class BoxMesh extends Mesh{
     //新建材质的方法
     newMat(matParam){
         //获取有用的材质参数，比如color
-        let param={};
-        let rem=['matType','mapParam'];
+        let param={color:0xffffff};
         for(let key in matParam){
-            if(!rem.includes(key)){
+            if(!this.ignoreAttr.includes(key)){
                 param[key]=matParam[key];
             }
         }
         //建立贴图
         let mapParam=matParam.mapParam;
         let _this=this;
-        if(mapParam&&mapParam.imgSrc){
+        //获取材质的构造函数
+        let matType=matParam.matType||'MeshLambertMaterial';
+
+        if(mapParam){
             let {imgSrc,rotation,repeatS,repeatT,wrapS=RepeatWrapping,wrapT=RepeatWrapping}=mapParam;
             let textureLoader = new TextureLoader();
             let texture = textureLoader.load(imgSrc,function(){
-                _this.render();
+                _this.checkRenderable();
             });
 
             if(repeatS&&repeatT){
@@ -312,11 +364,24 @@ export default class BoxMesh extends Mesh{
             }
             param.map=texture;
         }
-        //获取材质的构造函数
-        let matType=matParam.matType||'MeshLambertMaterial';
         //返回new 材质对象
         return new this.matStorage[matType](param);
     }
-
-
+    //检测是否可渲染
+    checkRenderable(){
+        this.mapLoadNum++;
+        if(this.mapLoadNum===this.mapNum){
+            this.material=this.dummyMat;
+            this.renderable=true;
+            this.mapLoading=false;
+        }else{
+            this.mapLoading=true;
+        }
+        console.log('this.mapLoading',this.mapLoading);
+    }
+    //重置数据
+    updateRenderData(){
+        this.mapNum=0;
+        this.mapLoadNum=0;
+    }
 }

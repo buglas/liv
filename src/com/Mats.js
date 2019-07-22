@@ -1,5 +1,6 @@
 const Mats={
     huTao:{
+        text:'胡桃木',
         matType:'MeshLambertMaterial',
         mapParam:{
             imgSrc:'/src/images/huTao.jpg',
@@ -7,6 +8,7 @@ const Mats={
         }
     },
     pingGuo:{
+        text:'苹果木',
         matType:'MeshLambertMaterial',
         mapParam:{
             imgSrc:'/src/images/pingGuo.jpg',
@@ -14,6 +16,7 @@ const Mats={
         }
     },
     ciZhuan1:{
+        text:'瓷砖1',
         matType:'MeshPhongMaterial',
         mapParam:{
             imgSrc:'/src/images/ciZhuan1.jpg',
@@ -21,6 +24,7 @@ const Mats={
         }
     },
     lvMoSha:{
+        text:'铝磨砂',
         matType:'MeshPhongMaterial',
         color:0xcccccc,
     },

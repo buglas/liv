@@ -163,7 +163,7 @@ export default class TransformControls2 extends Group{
             //点击canvas 的事件冒泡，不要将事件传递给上方物体
             _this.mousedownFn(event);
         },true);
-        window.addEventListener('mouseup',function (event) {
+        this.domElement.addEventListener('mouseup',function (event) {
             if(!_this.enable){return}
             _this.mouseupFn(event);
         });
@@ -316,7 +316,6 @@ export default class TransformControls2 extends Group{
     //鼠标抬起时，处于拖拽状态
     mouseupOfAxis(event){
         if(this.axis){
-            console.log('mouseupOfAxis');
             //只要选择了轴，在鼠标抬起时
             //取消轴选择
             if(this.dragState!=='axis'){
@@ -328,13 +327,11 @@ export default class TransformControls2 extends Group{
             //虚拟物体位置吻合实际物体位置
             //以应对吸附和浮动的情况
             this.updateTransformAttrByObj();
-
             //可拖拽
             //this.events['dragging-changed']({value:false});
             this.draggingChanged(false);
             //需渲染
             this.change();
-
         }
     }
     //鼠标抬起时，处于空处
@@ -511,7 +508,6 @@ export default class TransformControls2 extends Group{
             //this.setDummyPosByObj();
             //重置控制器位置
             //this.transform.position[planeAxis]=objPos+this.transSubObj[planeAxis];
-            console.log('floatChange');
             this.updateTransformAttrByObj();
             this.floatObj=floatObj;
         }
@@ -640,15 +636,6 @@ export default class TransformControls2 extends Group{
         }
         return axis;
     }
-
-    //自定义事件监听对象
-    /*addEventListener(evt,fn){
-        if(this.events[evt]){
-            this.events[evt]=fn;
-        }else{
-            console.log('TansformControls 没有此事件');
-        }
-    }*/
     //激活选择的轴
     actAxis(axiss=this.axis){
         let picker=this.transform.getObjectByName(this.mode);
@@ -719,6 +706,7 @@ export default class TransformControls2 extends Group{
         //可碰撞物体的删除
         this.deleteCrashableObj(object);
         //根据物体更新与其绑定的变换信息
+        if(!this.dummyBound){this.crtDummy()}
         this.updateTransformAttrByObj();
     }
     //分离
@@ -759,6 +747,8 @@ export default class TransformControls2 extends Group{
         this.saveDummySize();
         //物体位置减其六个边界的位置
         this.setObjSubBound();
+
+        this.floatObj=null;
     }
     //根据物体，设置鼠标与其它点位的位置关系
     //适用于crting 状态下，拖拽的物体
@@ -785,6 +775,7 @@ export default class TransformControls2 extends Group{
     }
     //根据实际物体位置设置虚拟物体位置
     setDummyPosByObj(){
+        //if(!this.object){return}
         //建立虚拟盒子
         let box3=new Box3();
         box3.setFromObject(this.object);
@@ -829,8 +820,11 @@ export default class TransformControls2 extends Group{
 
     //建立虚拟物体
     crtDummy(){
+        if(!this.object){return}
         this.dummyBound = new Box3Helper();
         this.dummyBound.material.color.set(0x38ffff);
+        this.dummyBound.material.depthTest=false;
+        this.dummyBound.material.depthWrite=false;
         this.add( this.dummyBound );
     }
     //建立控制器
@@ -866,7 +860,7 @@ export default class TransformControls2 extends Group{
         //中心盒子
         let box=new BoxBufferGeometry(.1,.1,.1);
         //轴
-        let cylinder=new CylinderBufferGeometry(0.04, 0.04, 1, 3, 1, false);
+        let cylinder=new CylinderBufferGeometry(0.035, 0.035, 1, 4, 1, false);
         let m = new Matrix4();
         m.makeTranslation(0,.55,0);
         m.applyToBufferAttribute(cylinder.attributes.position);
@@ -975,13 +969,13 @@ export default class TransformControls2 extends Group{
         let rad=this.cameraToObjectRad();
         if(this.expandRad===rad){return}
         this.transform.scale.set( 1, 1, 1 ).multiplyScalar(rad);
-        let box=this.dummyBound.box;
-        if(box){
+        let dummyBound=this.dummyBound;
+        if(dummyBound&&dummyBound.box){
             //存在虚拟盒子
             //先缩回去
-            box.expandByScalar(-this.expandRad/this.dummyBoundExpandScale);
+            dummyBound.box.expandByScalar(-this.expandRad/this.dummyBoundExpandScale);
             //再重新放大
-            box.expandByScalar(rad/this.dummyBoundExpandScale);
+            dummyBound.box.expandByScalar(rad/this.dummyBoundExpandScale);
         }
         this.expandRad=rad;
 
@@ -994,9 +988,9 @@ export default class TransformControls2 extends Group{
         let eyeDistance = worldPosition.distanceTo( this.camera.position);
         let rad=null;
         if(this.camera.isPerspectiveCamera){
-            rad=eyeDistance * this.size / 7;
+            rad=eyeDistance * this.size / 10;
         }else{
-            rad=100/zoom;
+            rad=140/zoom;
         }
         return rad;
     }

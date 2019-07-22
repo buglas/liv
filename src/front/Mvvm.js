@@ -34,7 +34,7 @@ export default class Mvvm{
             set: function (newVal) {
                 furn.dispatchEvent({
                     type: key,
-                    value:Tool.parseUnit(newVal)
+                    value:newVal
                 });
             },
         });
