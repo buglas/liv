@@ -18,6 +18,8 @@ export default class DiTai extends Group{
         this.taiMat='huTao'; //铝框Mesh
         this.lvMat='lvMoSha'; //铝框Mesh
 
+        this.name='DiTai';
+        this.text='地台';
         this.ls=parseUnit(4);//铝框內缩
         this.lh=parseUnit(25);//铝框高度
         this.init(param);
@@ -59,24 +61,40 @@ export default class DiTai extends Group{
         let _this=this;
         let taiM=this.getObjectByName('taiM');
         let lvK=this.getObjectByName('lvK');
-        this.addEventListener('width',(event)=>{
-            _this.width=event.value;
+        this.listen('width',(val)=>{
             lvK.setW(_this.getLw());
-            taiM.setW(_this.width);
+            taiM.setW(val);
+        },()=>{
+
         });
-        this.addEventListener('height',(event)=>{
-            _this.height=event.value;
-            taiM.setH(_this.height);
+        this.listen('height',(val)=>{
+            taiM.setH(val);
+        },()=>{
+
         });
-        this.addEventListener('depth',(event)=>{
-            _this.depth=event.value;
+        this.listen('depth',(val)=>{
             lvK.setD(this.getLd());
-            taiM.setD(_this.depth);
+            taiM.setD(val);
+        },()=>{
+
         });
-        this.addEventListener('taiMat',(event)=>{
-            _this.taiMat=event.value;
-            taiM.setMaterial(Mats[event.value]);
+        this.listen('taiMat',(val)=>{
+            taiM.setMaterial(Mats[val]);
             _this.checkRender(taiM);
+        },()=>{
+
+        });
+
+    }
+    listen(attr,setFn=()=>{},getFn=()=>{}){
+        let _this=this;
+        this.addEventListener(attr,(event)=>{
+            if(event.name==='get'){
+                getFn();
+            }else{
+                _this[attr]=event.value;
+                setFn(event.value);
+            }
         });
     }
     //添加渲染方法
@@ -96,7 +114,10 @@ export default class DiTai extends Group{
                 if(obj.renderable){
                     obj.renderable=false;
                     console.log('可以渲染: ',timeLength);
-                    _this.mapLoaded();
+                    setTimeout(function(){
+                        _this.mapLoaded()
+                    },0);
+                    //_this.mapLoaded();
                 }else{
                     check();
                 }

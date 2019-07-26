@@ -1,24 +1,30 @@
 import Observer from '@/front/Observer'
 import Tool from '@/com/Tool'
 import Conf from '../com/Conf'
+import {LogLuvEncoding} from "three";
 let unit=Conf.unit;
 export default class Mvvm{
     constructor({webglPart}){
         //data 可以是当前选择的家具
         this.webglPart=webglPart;
-        //建立一个方向属性
-        //用于判断是表单改变了视图
-        //...
+        //用于将来更新表单
         //{dom:节点,value:值,key:属性}
         this.subs=[];
 
     }
-    //用不上
-    proxy(){
-        let self=this;
-        this.subs.forEach(function (ele) {
-            self.proxyKey(ele.key);
+    //重置代理
+    resetProxy(inps,keyName='name'){
+        this.subs={};
+        let _this=this;
+        Array.prototype.forEach.call(inps,(ele)=>{
+            _this.addProxy(ele.getAttribute(keyName),ele);
         });
+    }
+    //添加代理
+    addProxy(key,ele){
+        this.subs[key]=ele;
+        //设置mvvm对象的代理键
+        this.proxyKey(key);
     }
     //设置mvvm对象的代理键
     proxyKey(key){
@@ -28,13 +34,18 @@ export default class Mvvm{
             enumerable: false,
             configurable: true,
             get: function () {
+                furn.dispatchEvent({
+                    type: key,
+                    name:'get',
+                });
                 //根据key 类型判断属性的获取方式：直接属性，变换属性
                 return furn[key];
             },
             set: function (newVal) {
                 furn.dispatchEvent({
                     type: key,
-                    value:newVal
+                    value:newVal,
+                    name:'set',
                 });
             },
         });

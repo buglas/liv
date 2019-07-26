@@ -1,13 +1,14 @@
 import Mats from '@/com/Mats'
 
-const data={
+const FurnFram={
     //家具类型，其键是唯一的
     furnTypes:{
-        fttg:{text:'分体厅柜',chidren:['Ditai','Digui']},
-        zttg:{text:'整体厅柜',chidren:['Ditai']},
+        fttg:{text:'分体厅柜',chidren:['DiTai','DiGui']},
+        zttg:{text:'整体厅柜',chidren:['DiTai']},
     },
     furnsData:{
-        Digui:{
+        //地柜
+        DiGui:{
             label:'地柜',
             form:{
                 heightTaimian:sizeParam({
@@ -33,7 +34,7 @@ const data={
             }
         },
         //地台
-        Ditai:{
+        DiTai:{
             label:'地台',
             form:{
                 width:sizeParam({
@@ -54,15 +55,13 @@ const data={
                 taiMat:matParam({
                     value:'pingGuo',
                     label:'台面材质',
-                    //若存在数字类型的下拉列表，将数字转字符串变成键
-                    //list:{''30':{text:'30'}},
-                    //list:{'huTao':{text:'胡桃木'}},
                     list:['huTao','pingGuo'],
                 })
             }
         },
     }
-}
+};
+export default FurnFram;
 /* 参数相关 */
 function sizeParam(param){
     let def={
@@ -79,10 +78,16 @@ function sizeParam(param){
         //正则，正整数
         reg:/^[1-9]\d*$/,
         //最小值
-        min:0,
+        min:30,
         //最大值
         max:2112
-    }
+    };
+    let newList={};
+    param.list.forEach((num)=>{
+        num=num.toString();
+        newList[num]={text:num}
+    });
+    param.list=newList;
     for(let key in param){
         def[key]=param[key];
     }
@@ -92,24 +97,24 @@ function posParam(){
 
 }
 function matParam(param){
-    //预定义数据
     let def={
         //默认值
         value:'huTao',
         //标签
         label:'材质标签',
+        //定制选项
+        list:['huTao','pingGuo'],
         //输入框类型，selection
         inputType:'selection',
         //数据类型，应对手动输入的input 状态
         valType:'string'
-    }
+    };
     //加工list
     let newList={};
     param.list.forEach((str)=>{
         newList[str]={text:Mats[str].text}
-    })
+    });
     param.list=newList;
-    //数据合成
     for(let key in param){
         def[key]=param[key];
     }

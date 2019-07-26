@@ -708,9 +708,16 @@ export default class TransformControls2 extends Group{
         //根据物体更新与其绑定的变换信息
         if(!this.dummyBound){this.crtDummy()}
         this.updateTransformAttrByObj();
+        //触发选择事件
+        if(!this.crting){
+            this.selected(object);
+        }
+
     }
     //分离
     detach(){
+        //触发物体取消徐选择事件
+        this.unselected();
         //可碰撞物体的载入
         this.addCrashableObj(this.object);
         //控制轴、虚拟物体都不可见
@@ -721,7 +728,6 @@ export default class TransformControls2 extends Group{
         this.setAxis(null);
         //没有划上的轴
         this.hoverAxis=null;
-        //this.transform.position.set(0,0,0);
 
     }
     //根据物体更新与其绑定的变换信息
@@ -1101,7 +1107,6 @@ export default class TransformControls2 extends Group{
         if(!this.crashable){
             this.sever=false;
         }
-        //this.events['crashable-change']({value:this.crashable});
         this.crashableChange(this.crashable);
     }
     //可浮动的变化
@@ -1112,19 +1117,32 @@ export default class TransformControls2 extends Group{
     }
 
     /*事件当触发*/
+    //需渲染的事件
     change(){
         this.dispatchEvent({type:'change'});
     }
+    //拖拽变换事件，解决orbit 冲突
     draggingChanged(value){
         this.dispatchEvent({type:'dragging-changed',value:value});
     }
+    //可吸附属性改变时，触发此事件。用于前端相关按钮的显示
     crashableChange(value){
         this.dispatchEvent({type:'crashable-change',value:value});
     }
+    //可浮动属性改变时，触发此事件。用于前端相关按钮的显示
     floatableChange(value){
         this.dispatchEvent({type:'floatable-change',value:value});
     }
+    //家具创建成功后。用于响应前端状态
     crted(){
         this.dispatchEvent({type:'crted'});
+    }
+    //家具取消选择时
+    unselected(){
+        this.dispatchEvent({type:'unselected'});
+    }
+    //家具选择时
+    selected(value){
+        this.dispatchEvent({type:'selected',value:value});
     }
 }

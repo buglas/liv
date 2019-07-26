@@ -8,7 +8,7 @@ import Mats from '@/com/Mats'
 import Tool from "@/com/Tool";
 const {parseUnit}=Tool;
 
-let tar;
+
 export default class WebglPart{
     constructor(viewDom){
         //键盘按键的意义
@@ -272,8 +272,10 @@ export default class WebglPart{
         this.transCtrl2.view=v;
         this.transCtrl2.camera=this.camera;
         this.transCtrl2.setScalar();
+        //根据所选物体重置平面
         this.transCtrl2.setInitPlane();
-        if(v==='f'||v==='l'){
+        //根据视图，设置轨道控制器的平移模式
+        if(v==='f'||v==='l'||v==='t'){
             this.orbitCtrl.screenSpacePanning=true;
         }else{
             this.orbitCtrl.screenSpacePanning=false;
@@ -303,7 +305,7 @@ export default class WebglPart{
         diTai.visible=false;
         let _this=this;
         diTai.addEventListener('map-loaded',function(){
-            console.log('-------map-loaded');
+            //console.log('-------map-loaded');
             _this.render();
         });
         this.scene.add(diTai);
@@ -315,7 +317,6 @@ export default class WebglPart{
         //根据物体，设置鼠标与其它点位的位置关系
         transCtrl2.updateMouseAttrByObj();
         transCtrl2.setInitPlane();
-        console.log('----plane',transCtrl2.plane);
         if(transCtrl2.view==='p'){
             diTai.visible=false;
             transCtrl2.visible=false;
