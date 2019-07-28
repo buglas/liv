@@ -59,14 +59,6 @@ export default class BoxMesh extends Mesh{
         this.setType();
         //需要旋转的索引
         this.rotateInds=this.getRotateInds();
-        //若非数组转数组，无贴图除外
-        /*this.matParam=this.setMatParam(matParam);
-        //先判断贴图参数是否为数组
-        if(this.matParam.constructor===Array){
-            this.material=this.getMatByMult();
-        }else{
-            this.material=this.newMat(this.matParam);
-        }*/
         //设置材质
         this.setMaterial(matParam);
 
@@ -99,16 +91,24 @@ export default class BoxMesh extends Mesh{
         //设置材质
         //先判断贴图参数,是否为数组.注意带有贴图的单个mat 已经被加工成数组了
         if(this.matParam.constructor===Array){
+            //材质形参是数组
+            //计算贴图数量
             this.setMapNum();
+            //暂存材质
             this.dummyMat=this.getMatByMult();
-        }else{
+        }else if(this.matParam.mapParam){
+            //一个贴图
             this.mapNum=1;
             this.dummyMat=this.newMat(this.matParam);
-        }
-        if(this.mapNum===0){
-            this.material=this.dummyMat;
         }else{
-            this.material=this.newMat({color:0xffffff});
+            //无贴图，单色材质
+            this.mapNum=0;
+            this.dummyMat=this.newMat(this.matParam);
+        }
+
+        if(this.mapNum===0){
+            //无贴图时，直接生成材质
+            this.material=this.dummyMat;
         }
     }
     getMaterial(matParam){
@@ -377,7 +377,6 @@ export default class BoxMesh extends Mesh{
         }else{
             this.mapLoading=true;
         }
-        console.log('this.mapLoading',this.mapLoading);
     }
     //重置数据
     updateRenderData(){

@@ -44,12 +44,14 @@ export default class DiTai extends Group{
     //初始化模型
     initMesh(){
         let {width,depth,ls}=this;
+
         //铝框
         let meshLvK=new BoxMesh(this.getLw(),this.lh,this.getLd(),Mats[this.lvMat]);
         meshLvK.name='lvK';
         meshLvK.position.x=ls;
         meshLvK.position.z=ls;
         this.add(meshLvK);
+
         //台面
         let meshTaiM=new BoxMesh(width,this.height,depth, Mats[this.taiMat]);
         meshTaiM.name='taiM';
@@ -73,7 +75,7 @@ export default class DiTai extends Group{
 
         });
         this.listen('depth',(val)=>{
-            lvK.setD(this.getLd());
+            //lvK.setD(this.getLd());
             taiM.setD(val);
         },()=>{
 
@@ -116,7 +118,7 @@ export default class DiTai extends Group{
                     console.log('可以渲染: ',timeLength);
                     setTimeout(function(){
                         _this.mapLoaded()
-                    },0);
+                    },100);
                     //_this.mapLoaded();
                 }else{
                     check();

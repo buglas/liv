@@ -34,20 +34,23 @@ body{
 /*线*/
 .line{
     border-bottom: 1px solid #47516f;
-    margin-bottom: 9px;
 }
 /*标准间距*/
 .mb9{
     margin-bottom: 9px;
+}
+.pd3{
+    padding:6px;
 }
 
 /*----------表单定制----------*/
 .liv-group{
     margin-bottom: 9px;
 }
-.liv-group label{
+.liv-lab{
     display: block;
-    margin-bottom: 9px;
+    line-height: 24px;
+    margin-bottom: 3px;
 }
 .liv-inp-wraper{
     position: relative;
@@ -72,8 +75,32 @@ body{
 .liv-selection{
     cursor: pointer;
 }
+/*变换属性的表单*/
+#position{
 
-/*input 的下拉列表样式*/
+}
+.liv-divice-3{
+    display: flex;
+    width: 100%;
+
+}
+.liv-divice-3 .liv-group{
+    display: flex;
+    flex: 1;
+}
+.liv-divice-3 .liv-group:nth-child(2){
+    padding-left: 4px;
+}
+.liv-divice-3 .liv-group:nth-child(3){
+    padding-left: 4px;
+}
+
+.liv-divice-3 .liv-group input{
+    flex: 1;
+}
+
+
+    /*input 的下拉列表样式*/
 .liv-down{
     position: absolute;
     right: 4px;
@@ -213,11 +240,9 @@ body{
 }
 /*面板*/
 .panel{
-    padding: 9px;
+    /*padding: 9px;*/
     background-color: #303a58;
 }
-
-
 
 
 /*生产面板*/
@@ -225,11 +250,6 @@ body{
     width: 180px;
 
 }
-/*-------编辑面板-------*/
-#panelEdit{
-    position: absolute;
-    width: 180px;
-    height: 100px;
-    left: 0;
-    top:1px;
+#btns{
+    padding: 6px 6px 0 6px;
 }

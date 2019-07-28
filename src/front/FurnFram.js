@@ -10,7 +10,7 @@ const FurnFram={
         //地柜
         DiGui:{
             label:'地柜',
-            form:{
+            form:livForm({
                 heightTaimian:sizeParam({
                     label:'台面高度',
                     value:16,
@@ -31,12 +31,12 @@ const FurnFram={
                     value:298,
                     list:[298,394,586],
                 }),
-            }
+            })
         },
         //地台
         DiTai:{
             label:'地台',
-            form:{
+            form:livForm({
                 width:sizeParam({
                     label:'宽度',
                     value:400,
@@ -57,11 +57,19 @@ const FurnFram={
                     label:'台面材质',
                     list:['huTao','pingGuo'],
                 })
-            }
+            })
         },
     }
 };
 export default FurnFram;
+
+/*属性相关*/
+function livForm(obj){
+    obj.x=posParam({label:'x'});
+    obj.y=posParam({label:'y'});
+    obj.z=posParam({label:'z'});
+    return obj;
+}
 /* 参数相关 */
 function sizeParam(param){
     let def={
@@ -93,8 +101,17 @@ function sizeParam(param){
     }
     return def;
 }
-function posParam(){
-
+function posParam(param){
+    let def={
+        value:'',
+        label:'标签',
+        inputType:'input',
+        valType:'number',
+    };
+    for(let key in param){
+        def[key]=param[key];
+    }
+    return def;
 }
 function matParam(param){
     let def={
