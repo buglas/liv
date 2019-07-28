@@ -42,7 +42,7 @@ webglPart.transCtrl2.addEventListener('selected',(event)=>{
 //家具属性表单值改变的情况，值是被验证过的有效值
 //触发事件：selection 下拉列表的单击；input 键盘抬起后的有效数据
 page.onFurnAttrChange=(key,val)=>{
-    mvvm[key]=val;
+    webglPart.transCtrl2.object[key]=val;
     //虚拟边界的更新
     if(webglPart.transCtrl2.crting){
         webglPart.transCtrl2.transformNeedUpdateOnMove=true;
@@ -53,7 +53,8 @@ page.onFurnAttrChange=(key,val)=>{
 };
 page.onCrtFurn=(curFurnName,furnDefaultValue,inpsDom)=>{
     webglPart.crtFurn(curFurnName,furnDefaultValue);
-    mvvm.resetProxy(inpsDom);
+    page.object=webglPart.transCtrl2.object;
+    //mvvm.resetProxy(inpsDom);
 };
 
 

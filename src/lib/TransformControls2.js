@@ -1145,4 +1145,8 @@ export default class TransformControls2 extends Group{
     selected(value){
         this.dispatchEvent({type:'selected',value:value});
     }
+    //家具位置的改变时
+    posChange(){
+
+    }
 }

@@ -33,6 +33,8 @@ export default class pagePart {
         //建立当前域的属性
         //当前家具类型
         this.curType='fttg';
+        //当前被选中的家具
+        this.object=null;
         //当前家具名称，默认null
 //此属性的赋值，受家具按钮的点击影响，受家具模型的选择影响
 //此属性的置空不受家具按钮影响
@@ -149,12 +151,14 @@ export default class pagePart {
             this.curFurnName=node.getAttribute('name');
             //家具按钮效果
             this.setFurnBtnStyle(node);
+            //创建家具
+            this.onCrtFurn(this.curFurnName,this.furnDefaultValue,this.getInpsDom());
+
             //显示相应表单,并附带填补furnDefaultValue
             this.updateFromByData();
             //更新家具属性面板的滚动状态
-            this.updateFromScroll();
-            //创建家具
-            this.onCrtFurn(this.curFurnName,this.furnDefaultValue,this.getInpsDom());
+            //this.updateFromScroll();
+
         }
     }
     
@@ -250,7 +254,7 @@ export default class pagePart {
     //在创建家具时，根据数据，显示相应表单
     updateFromByData(furnForm=this.furnForm,comAttr=this.comAttr){
         //初始化家具默认值
-        this.initFurnDefaultValue();
+        //this.initFurnDefaultValue();
         //置空家具属性表单
         this.clearFurnForm();
         //充实家具表单
@@ -260,7 +264,6 @@ export default class pagePart {
             if(!this.comAttr.includes(key)){
                 fragment+=pagePart.furnInp(param,key);
             }
-
         });
         //基于家具变换数据，建立表单
         fragment+=this.transInp(['x','y','z'],'位置 X Y Z');
@@ -355,7 +358,7 @@ export default class pagePart {
         let val=pagePart.parseFurnParam(valtype,furnVal);
         //家具属性表单值改变的情况，值是被验证过的有效值
         //触发事件：selection 下拉列表的单击；input 键盘抬起后的有效数据
-        this.onFurnAttrChange(name,val);
+        this.onFurnAttrChange(name,furnVal);
     }
 
     /*--------selected--------*/
@@ -377,7 +380,8 @@ export default class pagePart {
     }
     //遍历家具表单的属性
     forEachForm(fn,furnsData=this.furnsData,curFurnName=this.curFurnName){
-        let furnFormData=furnsData[curFurnName].form;
+        //let furnFormData=furnsData[curFurnName].form;
+        let furnFormData=this.object.data;
         for(let key in furnFormData){
             fn(key,furnFormData[key]);
         }
