@@ -1,11 +1,13 @@
 import Mats from "@/com/Mats"
+import Tool from '@/com/Tool'
+const {parseUnit,parseInp}=Tool;
 
 const FurnData={
-    livForm:(obj)=>{
-        obj.x=FurnData.posParam({label:'x'});
-        obj.y=FurnData.posParam({label:'y'});
-        obj.z=FurnData.posParam({label:'z'});
-        return obj;
+    livForm:(obj,param)=>{
+        param.px=FurnData.posParam(obj,'px');
+        param.py=FurnData.posParam(obj,'py');
+        param.pz=FurnData.posParam(obj,'pz');
+        return param;
     },
     sizeParam:(param)=>{
         let def={
@@ -36,16 +38,20 @@ const FurnData={
         }
         return def;
     },
-    posParam:(param)=>{
+    posParam:(obj,key)=>{
         let def={
             value:'',
-            label:'标签',
+            label:key,
             inputType:'input',
             valType:'number',
+            get:()=>{
+                return parseInp(obj.position[key[1]]);
+            },
+            set:(val)=>{
+                obj.data[key[1]]=val;
+                obj.position[key[1]]=parseUnit(val);
+            }
         };
-        for(let key in param){
-            def[key]=param[key];
-        }
         return def;
     },
     matParam:(param)=>{

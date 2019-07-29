@@ -32,10 +32,15 @@ webglPart.transCtrl2.addEventListener('unselected',()=>{
 });
 //家具选择方法，显示所选家具的表单属性furnForm
 webglPart.transCtrl2.addEventListener('selected',(event)=>{
+    page.object=event.value;
     page.curFurnName=event.value.name;
-    page.updateFromByObj(event.value);
-    mvvm.resetProxy(page.getInpsDom());
 
+    page.updateFrom();
+    mvvm.updateSubs(page.getInpsDom(),webglPart.transCtrl2.object);
+});
+//模型移动事件
+webglPart.transCtrl2.addEventListener('position-change',(event)=>{
+    mvvm.notify(webglPart.transCtrl2.object);
 });
 
 //页面相关
@@ -54,9 +59,11 @@ page.onFurnAttrChange=(key,val)=>{
 page.onCrtFurn=(curFurnName,furnDefaultValue,inpsDom)=>{
     webglPart.crtFurn(curFurnName,furnDefaultValue);
     page.object=webglPart.transCtrl2.object;
-    //mvvm.resetProxy(inpsDom);
-};
 
+};
+page.onCrtForm=(inpsDom)=>{
+    mvvm.updateSubs(inpsDom,webglPart.transCtrl2.object);
+}
 
 
 

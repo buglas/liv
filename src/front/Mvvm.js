@@ -13,51 +13,37 @@ export default class Mvvm{
 
     }
     //重置代理
-    resetProxy(inps,keyName='name'){
+    updateSubs(inps,object,keyName='name'){
         this.subs={};
         let _this=this;
         Array.prototype.forEach.call(inps,(ele)=>{
-            _this.addProxy(ele.getAttribute(keyName),ele);
+            let key=ele.getAttribute(keyName);
+            _this.subs[key]={
+                dom:ele,
+                mold:ele.getAttribute('data-mold'),
+                dataValue:ele.getAttribute('data-value'),
+                dataText:ele.getAttribute('data-text'),
+                list:object.data[key].list,
+            };
         });
     }
-    //添加代理
-    addProxy(key,ele){
-        this.subs[key]=ele;
-        //设置mvvm对象的代理键
-        this.proxyKey(key);
-    }
-    //设置mvvm对象的代理键
-    proxyKey(key){
-        let self = this;
-        let furn=self.webglPart.transCtrl2.object;
-        Object.defineProperty(this, key, {
-            enumerable: false,
-            configurable: true,
-            get: function () {
-                furn.dispatchEvent({
-                    type: key,
-                    name:'get',
-                });
-                //根据key 类型判断属性的获取方式：直接属性，变换属性
-                return furn[key];
-            },
-            set: function (newVal) {
-                furn.dispatchEvent({
-                    type: key,
-                    value:newVal,
-                    name:'set',
-                });
-            },
-        });
-    }
-    notify(){
-        let _this=this;
-        this.subs.forEach((ele)=>{
-            if(ele.value!==_this[ele.key]){
-                //更新input 的值
-                ele.dom.value=_this[ele.key];
+
+    notify(object){
+        for(let key in this.subs){
+            let {dom,mold,dataValue,dataText,list}=this.subs[key];
+            let curValue=object[key].toString();
+            if(dataValue!==curValue){
+                this.subs[key].dataValue=curValue;
+                dom.setAttribute('data-value',curValue);
+                if(mold==='input'){
+                    dom.value=curValue;
+                }else{
+                    dom.value=list[curValue].text;
+                }
+
             }
-        })
+        }
     }
+
 
 }

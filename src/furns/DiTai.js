@@ -15,15 +15,15 @@ export default class DiTai extends Group{
     constructor(param=null){
         super();
         this.data=null;
-        this.width=parseUnit(600);
-        this.height=parseUnit(30);
-        this.depth=parseUnit(322);
+        this.width=600;
+        this.height=30;
+        this.depth=322;
         this.taiMat='huTao'; //铝框Mesh
         this.lvMat='lvMoSha'; //铝框Mesh
         this.name='DiTai';
         this.text='地台';
-        this.ls=parseUnit(4);//铝框內缩
-        this.lh=parseUnit(25);//铝框高度
+        this.ls=4;//铝框內缩
+        this.lh=25;//铝框高度
         this.init(param);
     }
     //初始化属性、事件和模型
@@ -44,13 +44,12 @@ export default class DiTai extends Group{
     //初始化data 数据
     initData(){
         let _this=this;
-        this.data=livForm({
+        this.data=livForm(this,{
             width:sizeParam({
                 label:'宽度',
                 value:400,
                 list:[400,600,900,1200,1350,1500,1650,1800],
                 set:(val)=>{
-                    console.log(val);
                     _this.getObjectByName('lvK').setW(_this.getLw());
                     _this.getObjectByName('taiM').setW(parseUnit(val));
                 }
@@ -93,13 +92,15 @@ export default class DiTai extends Group{
     }
     //初始化模型
     initMesh(){
-        let {ls}=this;
+
+        let ls=parseUnit(this.ls);
+        let lh=parseUnit(this.lh);
         let width=parseUnit(this.width);
         let depth=parseUnit(this.depth);
         let height=parseUnit(this.height);
-        console.log(ls,width,depth);
+
         //铝框
-        let meshLvK=new BoxMesh(this.getLw(),this.lh,this.getLd(),Mats[this.lvMat]);
+        let meshLvK=new BoxMesh(this.getLw(),lh,this.getLd(),Mats[this.lvMat]);
         meshLvK.name='lvK';
         meshLvK.position.x=ls;
         meshLvK.position.z=ls;
@@ -108,10 +109,8 @@ export default class DiTai extends Group{
         //台面
         let meshTaiM=new BoxMesh(width,height,depth, Mats[this.taiMat]);
         meshTaiM.name='taiM';
-        meshTaiM.translateY(this.lh);
+        meshTaiM.translateY(lh);
         this.add(meshTaiM);
-        
-        console.log(this);
     }
 
     //初始化事件
@@ -151,7 +150,12 @@ export default class DiTai extends Group{
 
             Object.defineProperty(this, key, {
                 get: function () {
-                    return _this.data[key].value;
+                    if(_this.data[key].get){
+                        return _this.data[key].get();
+                    }else{
+                        return _this.data[key].value;
+                    }
+
                 },
                 set: function (val) {
                     _this.data[key].value=val;
@@ -196,7 +200,6 @@ export default class DiTai extends Group{
                 }
                 if(obj.renderable){
                     obj.renderable=false;
-                    console.log('可以渲染: ',timeLength);
                     setTimeout(function(){
                         _this.mapLoaded()
                     },100);
@@ -209,11 +212,11 @@ export default class DiTai extends Group{
     }
     //铝框宽
     getLw(){
-        return parseUnit(this.width)-this.ls*2;
+        return parseUnit(this.width-this.ls*2);
     }
     //铝框身
     getLd(){
-        return parseUnit(this.depth)-this.ls*2;
+        return parseUnit(this.depth-this.ls*2);
     }
     //渲染时间
     mapLoaded(){

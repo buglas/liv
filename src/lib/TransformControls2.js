@@ -226,6 +226,7 @@ export default class TransformControls2 extends Group{
             this.setScalar();
             //需渲染
             this.change();
+            this.positionChange();
 
         }else if (this.hoverEnable){
             //可划上，且轴为空
@@ -785,7 +786,7 @@ export default class TransformControls2 extends Group{
         //建立虚拟盒子
         let box3=new Box3();
         box3.setFromObject(this.object);
-        box3.expandByScalar(this.cameraToObjectRad()/this.dummyBoundExpandScale);
+        //box3.expandByScalar(this.cameraToObjectRad()/this.dummyBoundExpandScale);
         this.dummyBound.box=box3;
     }
 
@@ -975,14 +976,14 @@ export default class TransformControls2 extends Group{
         let rad=this.cameraToObjectRad();
         if(this.expandRad===rad){return}
         this.transform.scale.set( 1, 1, 1 ).multiplyScalar(rad);
-        let dummyBound=this.dummyBound;
+        /*let dummyBound=this.dummyBound;
         if(dummyBound&&dummyBound.box){
             //存在虚拟盒子
             //先缩回去
             dummyBound.box.expandByScalar(-this.expandRad/this.dummyBoundExpandScale);
             //再重新放大
             dummyBound.box.expandByScalar(rad/this.dummyBoundExpandScale);
-        }
+        }*/
         this.expandRad=rad;
 
     }
@@ -1146,7 +1147,7 @@ export default class TransformControls2 extends Group{
         this.dispatchEvent({type:'selected',value:value});
     }
     //家具位置的改变时
-    posChange(){
-
+    positionChange(value=this.object){
+        this.dispatchEvent({type:'position-change',value:value});
     }
 }
