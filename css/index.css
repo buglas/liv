@@ -100,7 +100,7 @@ body{
 }
 
 
-    /*input 的下拉列表样式*/
+/*input 的下拉列表样式*/
 .liv-down{
     position: absolute;
     right: 4px;
@@ -248,8 +248,12 @@ body{
 /*生产面板*/
 #panelCrt{
     width: 180px;
-
 }
+/*按钮集合*/
 #btns{
     padding: 6px 6px 0 6px;
+}
+/*家具属性*/
+#furnForm{
+    overflow-y: scroll;
 }

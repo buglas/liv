@@ -1,10 +1,12 @@
 import Tool from "@/com/Tool";
+import FurnLib from '@/furns/FurnLib'
+import Conf from '@/com/Conf'
 
-export default class pagePart {
-    constructor({furnTypes,furnsData}) {
-        this.furnTypes=furnTypes;
-        this.furnsData=furnsData;
-        
+//家具的分类
+const {furnTypes}=Conf;
+
+export default class PagePart {
+    constructor() {
         //整个撑开body的东东
         this.prop=document.getElementById('prop');
         //下方内容
@@ -36,8 +38,8 @@ export default class pagePart {
         //当前被选中的家具
         this.object=null;
         //当前家具名称，默认null
-//此属性的赋值，受家具按钮的点击影响，受家具模型的选择影响
-//此属性的置空不受家具按钮影响
+        //此属性的赋值，受家具按钮的点击影响，受家具模型的选择影响
+        //此属性的置空不受家具按钮影响
         this.curFurnName=null;
         //当前操作的input 节点
         this.curInpDom=null;
@@ -56,11 +58,13 @@ export default class pagePart {
         this.onFurnAttrChange=()=>{};
         //将要建立家具的方法
         this.onCrtFurn=()=>{};
+        //要建立表单的方法
         this.onCrtForm=()=>{};
         //初始化
         this.init();
     }
     init(){
+        console.log('page init');
         //初始化页面方法
         this.initPage();
         //初始化事件
@@ -97,7 +101,7 @@ export default class pagePart {
         this.prop.addEventListener('mousedown',function(event){_this.onPropMousedown(event)});
         //下拉列表的点击选择
         this.livList.addEventListener('click',function(event){_this.onListClick(event)});
-        
+
     }
 
     /*..........========页面初始化方法========..........*/
@@ -111,15 +115,18 @@ export default class pagePart {
     //初始化家具类型
     updateFurnType(furnType=this.furnType,curType=this.curType,){
         furnType.setAttribute('key',curType);
-        furnType.value=this.furnTypes[curType].text;
+        furnType.value=furnTypes[curType].text;
     }
     //初始化家具按钮
-    updateFurnBtns(furnsBtns=this.furnsBtns,furnTypes=this.furnTypes,curType=this.curType,furnsData=this.furnsData){
+    updateFurnBtns(furnsBtns=this.furnsBtns,curType=this.curType){
         furnsBtns.innerHTML='';
         let fragment = '';
         furnTypes[curType].chidren.forEach((key)=>{
-            if(furnsData[key]){
-                fragment+=`<div class="furn" name="${key}">${furnsData[key].label}</div>`;
+
+            let furn=FurnLib[key];
+            console.log('furn',furn.text);
+            if(furn){
+                fragment+=`<div class="furn" name="${key}">${furn.text}</div>`;
             }else{
                 console.error('furnTypes 里的家具和furnsData 里的家具名不匹配');
             }
@@ -135,6 +142,8 @@ export default class pagePart {
         let winH=window.innerHeight;
         prop.style.height=winH+'px';
         bottomCont.style.height=winH-toolbarH+'px';
+        //更新表单的滚动状态
+        this.updateFromScroll();
 
     }
     //生成面板的折叠
@@ -166,7 +175,7 @@ export default class pagePart {
 
         }
     }
-    
+
     /*..........表单事件方法..........*/
     //input 输入框的点击事件
     onPanelMousedown(event,livList=this.livList){
@@ -228,7 +237,7 @@ export default class pagePart {
         }
     }
     //下拉列表的点击选择
-    onListClick(event,curInpDom=this.curInpDom,furnForm=this.furnForm){
+    onListClick(event,curInpDom=this.curInpDom){
         let tar=event.target;
         if(curInpDom.value!==tar.innerHTML){
             //输入框的值不等于option 的内容
@@ -242,7 +251,6 @@ export default class pagePart {
             }else{
                 //如果是正常家具属性的selection
                 //触发mvvm 事件
-                //console.log('----dispachFromInp');
                 this.dispachFromInp();
             }
         }
@@ -260,8 +268,8 @@ export default class pagePart {
         node.setAttribute('class','furn btn-act');
         this.curFurnBtn=node;
     }
-    //在创建家具时，根据数据，显示相应表单
-    updateFrom(furnForm=this.furnForm,comAttr=this.comAttr){
+    //在创建或选择家具时，根据数据，显示相应表单
+    updateFrom(furnForm=this.furnForm){
         //置空家具属性表单
         this.clearFurnForm();
         //充实家具表单
@@ -275,13 +283,15 @@ export default class pagePart {
         //基于家具变换数据，建立表单
         fragment+=this.transInp(this.posAttr,'位置 X Y Z');
         furnForm.innerHTML=fragment;
+        //更新表单的滚动状态
+        this.updateFromScroll();
     }
 
     /*''''''''''--------表单事件相关方法--------''''''''''*/
 
     /*--------onPanelMousedown--------*/
     //设置下拉列表内容
-    setSelectionCont(curInpDom=this.curInpDom,furnTypes=this.furnTypes){
+    setSelectionCont(curInpDom=this.curInpDom){
         let name=curInpDom.getAttribute('name');
         if(name==='furnType'){
             this.crtList(furnTypes);
@@ -350,7 +360,6 @@ export default class pagePart {
         let dataValue=curInpDom.getAttribute('data-value');
         //针对input和selection 的值进行取舍判断
         let furnVal=dataValue?dataValue:curInpDom.value;
-        //let val=parseFurnParam(valtype,curInpDom.value);
         let val=this.parseFurnParam(valtype,furnVal);
         //家具属性表单值改变的情况，值是被验证过的有效值
         //触发事件：selection 下拉列表的单击；input 键盘抬起后的有效数据
@@ -359,16 +368,15 @@ export default class pagePart {
 
     /*--------selected--------*/
     //在选择家具时，根据对象，显示相应表单
-    
     //遍历家具表单的属性
-    forEachForm(fn,furnsData=this.furnsData,curFurnName=this.curFurnName){
-        //let furnFormData=furnsData[curFurnName].form;
+    forEachForm(fn){
         let furnFormData=this.object.data;
         for(let key in furnFormData){
             fn(key,furnFormData[key]);
         }
     }
     //根据不同的类型，建立不同的输入框
+    
      furnInp(param, key, value=null){
         //前端数据和图形数据相互补全
         //furnDefaultValue[key]=Tool.parseUnit(param.value);
@@ -385,7 +393,10 @@ export default class pagePart {
         }
         return fragment;
     }
-     inputFragment(label, valType, key, value){
+
+
+    //input 类型的输入框
+    inputFragment(label, valType, key, value){
         return `
             <div class="liv-group">
                 <label class="liv-lab">${label}</label>
@@ -400,7 +411,8 @@ export default class pagePart {
             </div>
         `;
     }
-     selectionFragment(label, valType, key, value, text){
+    //下拉列表类型的输入框
+    selectionFragment(label, valType, key, value, text){
         return `
             <div class="liv-group">
                 <label class="liv-lab">${label}</label>
@@ -417,7 +429,7 @@ export default class pagePart {
             </div>
         `;
     }
-    //基于家具变换数据，建立表单
+    //一行多列的输入框，如位置、旋转
     transInp(arr,label){
         let row=this.transRow(arr);
         let fragment=`
@@ -432,7 +444,6 @@ export default class pagePart {
         let row='';
         let _this=this;
         arr.forEach((ele)=>{
-            //let {valType,value}=_this.object.data[ele];
             let valType=_this.object.data[ele].valType;
             let value=_this.object[ele];
             row+=_this.transFragment(valType,ele,value);
@@ -454,11 +465,6 @@ export default class pagePart {
             </div>
         `;
     }
-
-    crtFurrnForm(){
-
-    }
-
     /*'''''''''''''''''''''''''''''''''''''''''''''''''''*/
 
 
@@ -510,7 +516,10 @@ export default class pagePart {
 
     /* ...节点相关... */
     updateFromScroll(){
-
+        let pannelH=this.panelCrt.clientHeight;
+        let btnsH=this.furnsBtns.clientHeight;
+        let formH=pannelH-btnsH;
+        this.furnForm.style.height=formH+'px';
     }
 
     //查找父级，根据class
@@ -549,12 +558,8 @@ export default class pagePart {
             curFurnBtn=null;
         }
     }
-    //当前家具相关信息置空
+    //当前家具下相关信息置空，除了curFurnName
     clearCurFurnInfo(){
-        //当前家具，默认null
-        //点击家具按钮时，curFurnName 是家具按钮的名称
-        //选择物体时，curFurnName 是所选物体的name
-        //curFurnName=null;
         //当前操作的input 节点
         this.curInpDom=null;
         //当前inp 值

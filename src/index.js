@@ -1,19 +1,14 @@
 import WebglPart from '@/front/WebglPart'
 import Mvvm from '@/front/Mvvm'
 import PagePart from '@/front/PagePart'
-import FurnFram from '@/front/FurnFram'
-import Tool from '@/com/Tool'
-import Mats from "@/com/Mats"
 
 
-//家具类型
-const {furnTypes,furnsData}=FurnFram;
 //图形相关的部分
 const webglPart=new WebglPart(document.getElementById('view'));
 //双向绑定器
-const mvvm=new Mvvm({webglPart});
+const mvvm=new Mvvm();
 //页面相关部分
-const page=new PagePart(FurnFram);
+const page=new PagePart();
 
 /*-------webglPart-------*/
 webglPart.init();

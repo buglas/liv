@@ -9,9 +9,10 @@ import BoxMesh  from '../Objects/BoxMesh'
 import Mats from '@/com/Mats'
 import Tool from '@/com/Tool'
 import FurnData from '@/com/FurnData'
+
 const {parseUnit}=Tool;
 const {livForm,sizeParam,matParam}=FurnData;
-export default class DiTai extends Group{
+class DiTai extends Group{
     constructor(param=null){
         super();
         this.data=null;
@@ -28,18 +29,12 @@ export default class DiTai extends Group{
     }
     //初始化属性、事件和模型
     init(param){
-        //初始化属性
-        //this.setAttr(param);
         //初始化data 数据
         this.initData();
         //监听数据
         this.walk();
         //初始化模型
         this.initMesh();
-        //初始化事件
-        //this.initEvents();
-
-
     }
     //初始化data 数据
     initData(){
@@ -84,15 +79,8 @@ export default class DiTai extends Group{
             })
         })
     }
-    //为对象赋值属性
-    setAttr(param){
-        for(let key in param){
-            this[key]=param[key];
-        }
-    }
     //初始化模型
     initMesh(){
-
         let ls=parseUnit(this.ls);
         let lh=parseUnit(this.lh);
         let width=parseUnit(this.width);
@@ -111,37 +99,6 @@ export default class DiTai extends Group{
         meshTaiM.name='taiM';
         meshTaiM.translateY(lh);
         this.add(meshTaiM);
-    }
-
-    //初始化事件
-    initEvents(){
-        let _this=this;
-        let taiM=this.getObjectByName('taiM');
-        let lvK=this.getObjectByName('lvK');
-        this.listen('width',(val)=>{
-            lvK.setW(_this.getLw());
-            taiM.setW(val);
-        },()=>{
-
-        });
-        this.listen('height',(val)=>{
-            taiM.setH(val);
-        },()=>{
-
-        });
-        this.listen('depth',(val)=>{
-            lvK.setD(this.getLd());
-            taiM.setD(val);
-        },()=>{
-
-        });
-        this.listen('taiMat',(val)=>{
-            taiM.setMaterial(Mats[val]);
-            _this.checkRender(taiM);
-        },()=>{
-
-        });
-
     }
     //监听数据
     walk(){
@@ -163,26 +120,6 @@ export default class DiTai extends Group{
                 },
             })
         }
-    }
-    getAttr(key){
-
-    }
-    setAttr(key,newVal){
-
-    }
-
-
-
-    listen(attr,setFn=()=>{},getFn=()=>{}){
-        let _this=this;
-        this.addEventListener(attr,(event)=>{
-            if(event.name==='get'){
-                getFn();
-            }else{
-                _this[attr]=event.value;
-                setFn(event.value);
-            }
-        });
     }
     //添加渲染方法
     checkRender(obj){
@@ -218,16 +155,14 @@ export default class DiTai extends Group{
     getLd(){
         return parseUnit(this.depth-this.ls*2);
     }
-    //渲染时间
+    //图片加载成功后
     mapLoaded(){
         this.dispatchEvent({type:'map-loaded'});
     }
-
 }
 
-
-
-
+DiTai.text='地台';
+export default DiTai;
 
 
 

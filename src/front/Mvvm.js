@@ -1,18 +1,10 @@
-import Observer from '@/front/Observer'
-import Tool from '@/com/Tool'
 import Conf from '../com/Conf'
-import {LogLuvEncoding} from "three";
-let unit=Conf.unit;
 export default class Mvvm{
-    constructor({webglPart}){
-        //data 可以是当前选择的家具
-        this.webglPart=webglPart;
+    constructor(){
         //用于将来更新表单
-        //{dom:节点,value:值,key:属性}
         this.subs=[];
-
     }
-    //重置代理
+    //重置绑定关系
     updateSubs(inps,object,keyName='name'){
         this.subs={};
         let _this=this;
@@ -27,7 +19,7 @@ export default class Mvvm{
             };
         });
     }
-
+    //遍历subs，获取object 的相关属性，更新到表单
     notify(object){
         for(let key in this.subs){
             let {dom,mold,dataValue,dataText,list}=this.subs[key];
