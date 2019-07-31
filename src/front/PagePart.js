@@ -64,7 +64,6 @@ export default class PagePart {
         this.init();
     }
     init(){
-        console.log('page init');
         //初始化页面方法
         this.initPage();
         //初始化事件
@@ -122,9 +121,7 @@ export default class PagePart {
         furnsBtns.innerHTML='';
         let fragment = '';
         furnTypes[curType].chidren.forEach((key)=>{
-
             let furn=FurnLib[key];
-            console.log('furn',furn.text);
             if(furn){
                 fragment+=`<div class="furn" name="${key}">${furn.text}</div>`;
             }else{
@@ -376,7 +373,7 @@ export default class PagePart {
         }
     }
     //根据不同的类型，建立不同的输入框
-    
+
      furnInp(param, key, value=null){
         //前端数据和图形数据相互补全
         //furnDefaultValue[key]=Tool.parseUnit(param.value);

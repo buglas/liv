@@ -19,7 +19,7 @@ const Crash={
             x:['r1l2','l1r2'],
             y:['t1b2','b1t2'],
             z:['f1c2','c1f2'],
-        }
+        };
         for(let i=0;i<transCtrl2.axis.length;i++){
             let dir=transCtrl2.axis[i];
             let dirA=map[dir][0];
@@ -64,7 +64,7 @@ const Crash={
             b1t2:[],
             f1c2:[],
             c1f2:[],
-        }
+        };
         //先判断x 轴
         crashableMeshs.forEach((ele,ind)=>{
             //根据极点获取六个面的位置
@@ -104,7 +104,7 @@ const Crash={
                 //c 面
                 Crash.crashObjAdd(crashObjs['c1f2'],ele,c1f2Dist,lr,bt,'c',c2);
             }
-        })
+        });
         return crashObjs;
     },
     //往集合中添加可碰撞对象，并由近至远排序

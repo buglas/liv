@@ -29,6 +29,7 @@ import {
     Quaternion,
 } from 'three'
 import Crash from '@/com/Crash'
+import TransformMesh from '@/lib/TransformMesh'
 
 export default class TransformControls2 extends Group{
     constructor(camera, domElement){
@@ -38,7 +39,7 @@ export default class TransformControls2 extends Group{
         this.domElement=domElement;
         //当前选择对轴
         this.axis=null;
-        //模式：位移，旋转，缩放
+        //模式：位移translate，旋转rotation，缩放scale
         this.mode='translate';
         //选择的对象
         this.object=null;
@@ -46,6 +47,8 @@ export default class TransformControls2 extends Group{
         this.enable=true;
         //鼠标划上无效
         this.hoverEnable=true;
+        //貌似一个鼠标位就可以解决很多问题，先放放，继续梳理---------------
+        this.mousePos=new Vector3();
         //鼠标点击位减去所选物体位置
         this.mouseSubObj=new Vector3();
         //鼠标点击位减去物体中心，以方便以鼠标为基准移动边界
@@ -81,8 +84,8 @@ export default class TransformControls2 extends Group{
         this.visible=false;
         //视图
         this.view='p';
-        //轴的包围盒
-        this.boundAxis={
+        //轴的包围器，用于轴选择
+        this.axisWrapper={
             translate:[],
             scale:[],
             rotate:[],
@@ -91,7 +94,7 @@ export default class TransformControls2 extends Group{
         this.dummyBound=null;
         //控制器物体
         this.transform=null;
-        //是否虚拟物体和真实物体分离
+        //是否虚拟物体和真实物体是否分离
         this.sever=false;
         //可选家具物体
         this.selectableFurns=[];
@@ -119,14 +122,15 @@ export default class TransformControls2 extends Group{
             'crted':()=>{},
         }
         //物体初始位置，参与计算平面位置和恢复
+        //这个一个平面在某一轴上的向量长度，有正负之分
         this.objInitPos=0;
         //控制器位置
         this.transInitPos=0;
         //物体位置到其六个边界的位置
         this.objSubBound={};
-        //平面方向，基于view
+        //平面的法线朝向的正负，基于view
         this.planeDir={p:1,t:1,r:1,f:1,l:-1,b:-1,c:-1};
-        //平面位置,基于view
+        //平面的法线朝向为1或-1 的那个轴, 基于view
         this.planeAxis={p:'y',t:'y',r:'x',f:'z',l:'x',b:'y',c:'z'};
         //浮动对象
         this.floatObj=null;
@@ -149,14 +153,20 @@ export default class TransformControls2 extends Group{
         this.init();
     }
     init(){
+        //初始化变换环境
+        this.initEvironment();
+        //初始化事件
+        this.initEvents();
+    }
+    //初始化变换环境
+    initEvironment(){
         //初始化平面
         this.setInitPlane();
-        //建立虚拟物体
-        this.crtDummy();
         //建立操作轴，并先将其隐藏
         this.crtTransform();
-
-        //注册轴与物体点击事件，试试自定义事件,将点击对象赋予object
+    }
+    //初始化事件
+    initEvents(){
         let _this=this;
         this.domElement.addEventListener('mousedown',function (event) {
             if(!_this.enable){return}
@@ -172,28 +182,46 @@ export default class TransformControls2 extends Group{
             _this.mousemoveFn(event);
         });
         window.addEventListener('keydown',function (event) {
-            //按键切换吸附与浮动
-            if(event.shiftKey) {
-                switch (event.key) {
-                    case 'C':
-                        //吸附开关
-                        _this.toggleCrashable();
-                        break;
-                    case 'F':
-                        //浮动开关
-                        _this.toggleFloatable();
-                        break;
-                }
-            }
+            _this.keydownFn(event);
         })
-
-        //设置缩放
-        //this.setScalar();
-
     }
+
+    /*==================== 初始化变换环境相关方法 ====================*/
+    //获取初始平面
+    setInitPlane(){
+        //平面的法线朝向为1 或-1 的那个轴, 基于view
+        let planeAxis=this.planeAxis[this.view];
+        //平面的法线朝向的正负，基于view
+        let planeDir=this.planeDir[this.view];
+        //planeAxis 和planeDir 够成列一个具有方向的法线
+        //由法线得平面
+        let vec3Plane=new  Vector3();
+        vec3Plane[planeAxis]=planeDir;
+        //平面位置=物体的当前轴位+鼠标到物体距离的当前轴位
+        //实际平面的位置默认在鼠标点到物体上的位置
+        let vec3Pos=new  Vector3();
+        vec3Pos[planeAxis]=this.objInitPos+this.mouseSubObj[planeAxis];
+        //貌似可以如此
+        //vec3Pos[planeAxis]=this.objInitPos+this.mousePos[planeAxis];
+        let plane=new Plane(vec3Plane);
+        plane.translate(vec3Pos);
+        this.plane=plane;
+    }
+    //建立控制器
+    crtTransform(){
+        //加载变换控制器
+        this.transform=new TransformMesh();
+        this.add(this.transform);
+        //根据mode 设置哪一种控制器可见，默认是移动控制器
+        //在mode 发生改变时，要显示到控制器也做相应改变
+        this.transform.getObjectByName(this.mode).visible=true;
+    }
+
+    /*==================== 初始化事件相关方法 ====================*/
     mousedownFn(event){
         switch (event.buttons){
             case 1:
+                //左键单击，区别于相机轨道控制器的右击
                 this.leftMouseDownFn(event);
                 break
         }
@@ -201,24 +229,24 @@ export default class TransformControls2 extends Group{
     }
     mouseupFn(event){
         //拖拽的时候
-        this.mouseupOfAxis(event);
+        this.mouseupOnAxis(event);
         //在空处抬起的时候
-        this.mouseupOfEmpty(event);
+        this.mouseupOnEmpty(event);
         //拖拽形态
         this.dragState=null;
     }
     mousemoveFn(event){
         //只要轴不为空方可移动
         if(this.axis){
-            //是否需要更新变换控制器和虚拟对象
+            //是否需要更新控制器和虚拟对象
             if(this.transformNeedUpdateOnMove){
                 this.transformNeedUpdateOnMove=false;
                 //根据物体，设置鼠标与其它点位的位置关系
                 this.updateMouseAttrByObj();
-                //根据物体更新与其绑定的变换信息
+                //根据物体更新与其绑定的控制器信息
                 this.updateTransformAttrByObj();
             }
-            //检测碰撞
+            //检测碰撞，吸附物体
             this.checkCrash();
             //移动物体
             this.moveObj(event);
@@ -226,39 +254,62 @@ export default class TransformControls2 extends Group{
             this.setScalar();
             //需渲染
             this.change();
+            //触发位置改变事件
             this.positionChange();
-
         }else if (this.hoverEnable){
+            //非拖拽状态
             //可划上，且轴为空
             //做轴的划上检测
             this.setHoverAxis(event);
         }
     }
+    keydownFn(event){
+        //按键切换吸附与浮动
+        if(event.shiftKey){
+            switch (event.key) {
+                case 'C':
+                    //吸附开关
+                    this.toggleCrashable();
+                    break;
+                case 'F':
+                    //浮动开关
+                    this.toggleFloatable();
+                    break;
+            }
+        }
+    }
 
+    /*-------------------- 初始化事件相关方法 - 子方法 --------------------*/
+
+    /*=======.......... mousedownFn ..........=======*/
     //鼠标左击
     leftMouseDownFn(event){
         //鼠标左击
-        //识别家具在建状态
-        this.checkCrting();
         if(this.object){
             //.object 存在,则有拖拽轴
             //若.axis 不为空，就将其置空。（切断）
             //控制器是否发生改变
             if(this.axis){
-                //有轴存在：置空拖拽轴，不是将之隐藏
+                //有轴存在
+                //置空拖拽轴，取消轴选择
                 this.setAxis(null);
+                //识别家具在建状态，触发家具创建完成事件。
+                this.checkCrting();
+                //触发渲染事件
                 this.change();
             }
-            //▷ 在操作轴里，获取选择对象。默认遍历集合是操作轴。
-            let curSelected=this.getIntersectObject(event);
+            //在包裹操作轴包裹起的集合里，获取选择对象。默认遍历集合是操作轴。
+            let curSelected=this.getIntersectAxis(event);
             if(curSelected){
                 //鼠标点击在轴上
                 this.mousedownOfAxis(event,curSelected);
+                //代码到此为止
+                return;
             }
         }
-        //如果没有选择轴
+        //如果没有选择轴，判断是否选择里物体
         if(!this.axis){
-            let curSelectedObj=this.getIntersectObject(event,this.selectableFurns);
+            let curSelectedObj=this.getIntersectAxis(event,this.selectableFurns);
             if(curSelectedObj){
                 this.mousedownOfFurn(event,curSelectedObj);
             }else{
@@ -267,7 +318,19 @@ export default class TransformControls2 extends Group{
             }
         }
     }
-    //识别家具在建状态
+    /*..........==== 相关子方法 ====..........*/
+    //设置选择的轴为激活状态，还是非激活状态
+    setAxis(axis){
+        if(axis){
+            //激活轴
+            this.transform.actAxis(axis,this.mode);
+        }else if(this.axis){
+            //取消轴选择
+            this.transform.unactAxis(this.axis,this.mode);
+        }
+        this.axis=axis;
+    }
+    //识别家具在建状态，触发家具创建完成事件。
     checkCrting(){
         //当正在创建家具时，当前鼠标没有按下左键，但存在curSelectedObj
         //鼠标但点击直接放下物体，取消选择
@@ -278,6 +341,15 @@ export default class TransformControls2 extends Group{
             this.crted();
         }
     }
+    //获取选择的物体
+    getIntersectAxis(event,objects=this.transform.axisWrapper[this.mode]){
+        //设置射线方向，基于鼠标和相机位
+        this.setRaycaster(event);
+        //获取点击集合
+        let intersects = this.raycaster.intersectObjects( objects,true);
+        //返回第一个物体
+        return intersects[0];
+    }
     //鼠标点击在轴上
     mousedownOfAxis(event,curSelected){
         //记录拖拽形态
@@ -287,7 +359,7 @@ export default class TransformControls2 extends Group{
         this.setAxis(curSelected.object.name[0]);
         //透视图中，根据当前的拖拽轴切换平面
         //在其它视图，平面会直接在init 里初始化
-        this.changePlaneInP();
+        this.setPlaneIfInP();
         //设置鼠标和相关物体的偏移距离
         this.setMouseSubSmth(event);
         //启动拖拽事件
@@ -301,10 +373,8 @@ export default class TransformControls2 extends Group{
         //存在选择的物体
         //启动拖拽事件
         this.draggingChanged(true);
-        //针对透视图，切换this.plane 为水平面
-        if(this.view==='p'){
-            this.setInitPlane();
-        }
+        //如果在透视图，切换this.plane 为水平面
+        this.setPlaneIfInP();
         //获取包涵当前选择对象的的可选择物体
         let sceneChild=this.getParentInArray(curSelected.object,this.selectableFurns);
         //选择对象
@@ -314,13 +384,216 @@ export default class TransformControls2 extends Group{
         //设置鼠标和相关物体的偏移距离
         this.setMouseSubSmth(event);
     }
+    /*.......... mousedownOfAxis ..........*/
+    //透视图中，根据当前的拖拽轴切换平面
+    setPlaneIfInP(){
+        if(this.view==='p'){
+            if(this.axis==='y'){
+                this.setInitPlaneInPforY();
+            }else{
+                this.setInitPlane();
+            }
+        }
+    }
+    //设置鼠标和相关物体的偏移距离
+    setMouseSubSmth(event){
+        let focus=this.getFocus(event);
+        //设置鼠标位置减物体位置
+        this.mouseSubObj=this.getMouseSubObj(focus);
+        //鼠标位置减物体中心位置
+        this.mouseSubCenter=this.getMouseSubCenter(focus);
+        //鼠标位置减控制器位置
+        this.mouseSubTrans=this.getMouseSubTrans(focus);
+    }
+    //获取鼠标在平面上的焦点
+    getFocus(){
+        let vec3=new Vector3();
+        return this.raycaster.ray.intersectPlane(this.plane,vec3);
+    }
+    getMouseSubObj(point,obj=this.object){
+        return point.clone().sub(obj.position)
+    }
+    getMouseSubCenter(point,obj=this.object){
+        return point.clone().sub(this.getObjectCenter(obj));
+    }
+    getMouseSubTrans(point,obj=this.object){
+        //当前将控制器位置暂定位为中心点
+        return point.clone().sub(this.getObjectCenter(obj));
+    }
+    /*.......... mousedownOfFurn ..........*/
+    //从parents中获取包含子元素selected 的元素
+    getParentInArray(selected,parents){
+        let parent=null;
+        findRoot(selected);
+        function findRoot(obj){
+            if(parents.indexOf(obj)==-1){
+                if(obj.parent){
+                    findRoot(obj.parent);
+                }
+            }else{
+                parent=obj;
+            }
+        }
+        return parent;
+    }
+    //选择物体。将还处于选择态的分离，当前选中的附加
+    selectObj(sceneChild){
+        let transObj=this.object;
+        if(transObj){
+            //object物体已存在
+            //判断之前选择物体和现在选择物体是否是同一个
+            if(sceneChild!==transObj){
+                //不是同一个
+                //分离
+                this.detach(transObj);
+                //附加
+                this.attach(sceneChild);
+                //需渲染
+                this.change();
+            }
+        }else{
+            //附加
+            this.attach(sceneChild);
+            //需渲染
+            this.change();
+        }
+    }
+    //根据view 设置拖拽轴
+    setDragAxisByView(){
+        switch (this.view){
+            case 'p':
+            case 'b':
+            case 't':
+                this.setAxis('xz');
+                break;
+            case 'f':
+            case 'c':
+                this.setAxis('xy');
+                break;
+            case 'l':
+            case 'r':
+                this.setAxis('zy');
+                break;
+        }
+    }
+    //分离
+    detach(){
+        //触发物体取消徐选择事件
+        this.unselected();
+        //可碰撞物体的载入
+        this.addCrashableObj(this.object);
+        //控制轴、虚拟物体都不可见
+        this.visible=false;
+        //当前选择物体置空
+        this.object=null;
+        //取消选择轴
+        this.setAxis(null);
+        //没有划上的轴
+        this.hoverAxis=null;
+    }
+    //附加对象
+    attach(object){
+        this.visible=true;
+        this.object=object;
+        //从可碰撞物体集合里的删除当前选择物体
+        this.deleteCrashableObj(object);
+        //若没有虚拟对象就建立一个，虚拟对象只要部位null，虚拟对象就不会被再次添加列
+        if(!this.dummyBound){this.crtDummy()}
+        //根据物体更新与其绑定的变换信息
+        this.updateTransformAttrByObj();
+        //触发选择事件
+        if(!this.crting){
+            this.selected(object);
+        }
+    }
+    /*=====>>> detach 子方法 <<<=====*/
+    //可碰撞物体的载入
+    //将家具分解到Mesh 层，根据每个mesh 提取一个边界盒子，添加到可碰撞集合里
+    addCrashableObj(furn){
+        if(!furn){return}
+        for(let crashableMesh of this.crashableMeshs){
+            if (crashableMesh.furnId===furn.id){
+                //return 会终止循环和方法内的单线程
+                return;
+            }
+        }
+        let _this=this;
+        findChild(furn);
+        function findChild(obj){
+            if(obj.children.length){
+                obj.children.forEach((ele)=>{
+                    findChild(ele);
+                })
+            }else{
+                //计算其box 边界
+                let box=_this.getBox(obj);
+                //获取两个极点的三个轴共六个值
+                let {min,max}=box;
+                let [l,b,c,r,t,f]=[min.x,min.y,min.z,max.x,max.y,max.z];
+                //添加可碰撞网格数据到集合中
+                _this.crashableMeshs.push({
+                    //包裹里所有Mesh 到家具id
+                    furnId:furn.id,
+                    //当前边界盒子到id
+                    id:obj.id,
+                    //边界盒子实物
+                    box,
+                    //边界盒子到六个面
+                    floatFaces:_this.getFloatFace(l,b,c,r,t,f),
+                    //七个视图方位
+                    p:t,l,b,c,r,t,f
+                })
+            }
+        }
+    }
+    //获取可碰撞物体的浮动面
+    getFloatFace(l,b,c,r,t,f){
+        let [ltc,ltf,rtf,rtc,lbc,lbf,rbf,rbc]=[
+            new Vector3(l,t,c),
+            new Vector3(l,t,f),
+            new Vector3(r,t,f),
+            new Vector3(r,t,c),
+            new Vector3(l,b,c),
+            new Vector3(l,b,f),
+            new Vector3(r,b,f),
+            new Vector3(r,b,c),
+        ];
+        return {
+            p:[[ltc,ltf,rtf],[rtf,rtc,ltc]],
+            t:[[ltc,ltf,rtf],[rtf,rtc,ltc]],
+            b:[[lbf,lbc,rbc],[rbc,rbf,lbf]],
+            f:[[ltf,lbf,rbf],[rbf,rtf,ltf]],
+            c:[[rtc,rbc,lbc],[lbc,ltc,rtc]],
+            l:[[ltc,lbc,lbf],[lbf,ltf,ltc]],
+            r:[[rtf,rbf,rbc],[rbc,rtc,rtf]],
+        }
+    }
+    /*=====>>> attach 子方法 <<<=====*/
+    //可碰撞物体的删除
+    deleteCrashableObj(furn){
+        this.crashableMeshs=this.crashableMeshs.filter((ele)=>{
+            return ele.furnId!==furn.id;
+        });
+    }
+    //建立虚拟物体
+    crtDummy(){
+        if(!this.object){return}
+        this.dummyBound = new Box3Helper();
+        this.dummyBound.material.color.set(0x38ffff);
+        this.dummyBound.material.depthTest=false;
+        this.dummyBound.material.depthWrite=false;
+        this.add( this.dummyBound );
+    }
+
+
+    /*=======.......... mouseupFn ..........=======*/
     //鼠标抬起时，处于拖拽状态
-    mouseupOfAxis(event){
+    mouseupOnAxis(event){
         if(this.axis){
             //只要选择了轴，在鼠标抬起时
             //取消轴选择
             if(this.dragState!=='axis'){
-                this.unactAxis();
+                this.transform.unactAxis(this.axis,this.mode);
             }
             //正在操作的轴置空
             this.axis=null;
@@ -329,14 +602,13 @@ export default class TransformControls2 extends Group{
             //以应对吸附和浮动的情况
             this.updateTransformAttrByObj();
             //可拖拽
-            //this.events['dragging-changed']({value:false});
             this.draggingChanged(false);
             //需渲染
             this.change();
         }
     }
     //鼠标抬起时，处于空处
-    mouseupOfEmpty(event){
+    mouseupOnEmpty(event){
         if(this.clickTime){
             let timeDist=new Date()-this.clickTime;
             //此逻辑可外置，亦可内置，特殊情况特殊对待
@@ -351,7 +623,43 @@ export default class TransformControls2 extends Group{
             }
         }
     }
-    //检测碰撞
+
+    /*=======.......... mousemoveFn ..........=======*/
+    //根据物体，设置鼠标与其它点位的位置关系
+    //适用于crting 状态下，拖拽的物体
+    updateMouseAttrByObj(){
+        let point=this.getObjectCenter();
+        this.mouseSubObj=this.getMouseSubObj(point);
+        this.mouseSubCenter=this.getMouseSubCenter(point);
+        this.mouseSubTrans=this.getMouseSubTrans(point);
+    }
+    //根据物体更新与其绑定的变换信息
+    updateTransformAttrByObj(){
+        //object 的中心点
+        let center=this.getObjectCenter(this.object);
+        let pos=this.object.position.clone();
+        //控制器位置
+        this.transform.position.copy(center);
+        //缩放控制器
+        this.setScalar();
+        //平面偏移位置
+        let planeAxis=this.planeAxis[this.view];
+        this.objInitPos=pos[planeAxis];
+        this.transInitPos=this.transform.position[planeAxis];
+        //控制器位置减去物体位置
+        this.transSubObj=center.clone().sub(pos);
+        //物体中心位置减去物体位置
+        this.centerSubObj=center.clone().sub(pos);
+        //根据实际物体位置设置虚拟物体位置
+        this.setDummyPosByObj();
+        //存储虚拟物体的尺寸
+        this.saveDummySize();
+        //物体位置减其六个边界的位置
+        this.setObjSubBound();
+
+        this.floatObj=null;
+    }
+    //检测碰撞，吸附物体
     checkCrash(){
         if(!this.crashable){return}
         //分离
@@ -363,9 +671,10 @@ export default class TransformControls2 extends Group{
                 sever=true;
             }
         );
-        //分离与否
         this.sever=sever;
         if(sever){
+            //若实物因吸附和虚拟边界产生分离
+            //移动实物
             for(let i=0;i<this.axis.length;i++){
                 let axis=this.axis[i];
                 this.object.position[axis]=newObjPos[axis];
@@ -373,103 +682,12 @@ export default class TransformControls2 extends Group{
             }
         }
     }
-    //选择物体
-    selectObj(sceneChild){
-        let transObj=this.object;
-        if(transObj){
-            //object物体已存在
-            //判断之前选择物体和现在选择物体是否是同一个
-            if(sceneChild!==transObj){
-                //不是同一个
-                this.detach(transObj);
-                this.attach(sceneChild);
-                //需渲染
-                this.change();
-            }
-        }else{
-            this.attach(sceneChild);
-            //需渲染
-            this.change();
-        }
-    }
-    //透视图中，根据当前的拖拽轴切换平面
-    changePlaneInP(){
-        if(this.view==='p'){
-            if(this.axis==='y'){
-                this.setInitPlaneInPforY();
-            }else{
-                this.setInitPlane();
-            }
-        }
-    }
-
-    //设置鼠标和相关物体的偏移距离
-    setMouseSubSmth(event){
-        let focus=this.getFocus(event);
-        //设置鼠标位置减物体位置
-        this.mouseSubObj=this.getMouseSubObj(focus);
-        //鼠标位置减物体中心位置
-        this.mouseSubCenter=this.getMouseSubCenter(focus);
-        //鼠标位置减控制器位置
-        this.mouseSubTrans=this.getMouseSubTrans(focus);
-    }
-    getMouseSubObj(point,obj=this.object){
-        return point.clone().sub(obj.position)
-    }
-    getMouseSubCenter(point,obj=this.object){
-        return point.clone().sub(this.getObjectCenter(obj));
-    }
-    getMouseSubTrans(point,obj=this.object){
-        //当前将控制器位置暂定位为中心点
-        return point.clone().sub(this.getObjectCenter(obj));
-    }
-
-    //设置选择的轴
-    setAxis(axis){
-        if(axis){
-            //激活轴
-            this.actAxis(axis);
-        }else{
-            //取消轴选择
-            if(this.axis){
-                this.unactAxis();
-            }
-        }
-        this.axis=axis;
-    }
-    //设置划上的轴
-    setHoverAxis(event){
-        let curSelected=this.getIntersectObject(event);
-        if(curSelected){
-            let curHoverAxis=curSelected.object.name[0];
-            if(this.hoverAxis===curHoverAxis){
-                return
-            }else{
-                this.unactHoverAxis();
-                this.hoverAxis=curHoverAxis;
-                this.actAxis(this.hoverAxis);
-                //需渲染
-                this.change();
-            }
-        }else{
-            this.unactHoverAxis();
-            //需渲染
-            this.change();
-        }
-    }
-    unactHoverAxis(){
-        if(this.hoverAxis){
-            this.unactAxis(this.hoverAxis);
-            this.change();
-            this.hoverAxis=null;
-        }
-    }
     //移动物体
     moveObj(event){
-        //设置射线，根据相机和鼠标位
+        //设置射线方向，基于鼠标和相机位
         this.setRaycaster(event);
         //根据浮动设置物体位置
-        this.setObjFloatPos()
+        this.setObjFloatPos();
         //获取鼠标在平面上的焦点
         let focus=this.getFocus();
         //若鼠标点击的位置在视平线以上，相机到鼠标的射线是不会和地面产生焦点的
@@ -479,16 +697,69 @@ export default class TransformControls2 extends Group{
             //先根据鼠标位置，设置边界盒子位置
             this.setDummyPosByMouse(focus);
             if(!this.sever){
-                //不分离
+                //虚拟物体和真实物体未分离
                 this.dragUnsever(focus);
             }
         }else{
+            //若鼠标跑出离平面，物体和控制器不可见
             this.setVisibleByFocus(false);
         }
         this.change();
     }
+    //缩放控制器
+    setScalar(){
+        let rad=this.cameraToObjectRad();
+        if(this.expandRad===rad){return}
+        this.transform.scale.set( 1, 1, 1 ).multiplyScalar(rad);
+        /*let dummyBound=this.dummyBound;
+        if(dummyBound&&dummyBound.box){
+            //存在虚拟盒子
+            //先缩回去
+            dummyBound.box.expandByScalar(-this.expandRad/this.dummyBoundExpandScale);
+            //再重新放大
+            dummyBound.box.expandByScalar(rad/this.dummyBoundExpandScale);
+        }*/
+        this.expandRad=rad;
+
+    }
+    //设置轴为划上状态
+    setHoverAxis(event){
+        //获取划上的轴
+        let curSelected=this.getIntersectAxis(event);
+        if(curSelected){
+            //提取关键轴信息，x y z
+            let curHoverAxis=curSelected.object.name[0];
+            if(this.hoverAxis===curHoverAxis){
+                //轴相同，则返回
+                return
+            }else{
+                //轴不同，先恢复原始轴状态
+                this.unactHoverAxis();
+                //更新划上轴
+                this.hoverAxis=curHoverAxis;
+                //设置轴效果
+                this.transform.actAxis(this.hoverAxis,this.mode);
+                //需渲染
+                this.change();
+            }
+        }else{
+            this.unactHoverAxis();
+            //需渲染
+            this.change();
+        }
+    }
+    /*..........==== 相关子方法 ====..........*/
+    /*.......... moveObj ..........*/
+    //设置射线方向，基于鼠标和相机位
+    setRaycaster(event){
+        //视图点
+        let pointer=this.getPointer( event,this.domElement);
+        //获取射线
+        this.raycaster.setFromCamera( pointer, this.camera );
+    }
     //根据浮动设置物体位置
     setObjFloatPos(){
+        //若仅用浮动，则返回
         if (!this.floatable){return}
         //根据射线寻找鼠标滑过的浮动面
         let planeAxis=this.planeAxis[this.view];
@@ -513,22 +784,82 @@ export default class TransformControls2 extends Group{
             this.floatObj=floatObj;
         }
     }
-    //根据射线寻找鼠标滑过的浮动面
+    //根据焦点设置物体的可见性
+    setVisibleByFocus(bool){
+        this.object.visible=bool;
+        this.visible=bool;
+    }
+    //设置虚拟边界对象的Box，基于鼠标位置，鼠标减中心点和边界盒子的长宽高
+    setDummyPosByMouse(point){
+        //盒子的中心点
+        //焦点减鼠标减中心点的位置
+        let boxCenter=point.clone().sub(this.mouseSubCenter);
+        let dis=this.dummyBound.whd.clone().divideScalar(2);
+        let min1=boxCenter.clone().sub(dis);
+        let max1=boxCenter.clone().add(dis);
+        let box2=this.dummyBound.box;
+        let min2=box2.min;
+        let max2=box2.max;
+        let axis=this.axis;
+        for(let i=0;i<axis.length;i++){
+            let axisi=axis[i];
+            min2[axisi]=min1[axisi];
+            max2[axisi]=max1[axisi];
+        }
+        let box3=new Box3(min2,max2);
+        this.dummyBound.box=box3;
+        //this.dummyBound.updateMatrixWorld();
+    }
+    //不分离的拖拽物体和控制器
+    dragUnsever(focus){
+        //基于鼠标获取物体位置
+        let objPos=focus.clone().sub(this.mouseSubObj);
+        //基于鼠标获取控制器位置
+        let transPos=focus.clone().sub(this.mouseSubTrans);
+        for(let i=0;i<this.axis.length;i++){
+            let axisi=this.axis[i];
+            this.object.position[axisi]=objPos[axisi];
+            this.transform.position[axisi]=transPos[axisi];
+        }
+        this.object.updateMatrix();
+        this.transform.updateMatrix();
+    }
+    /*.......... setHoverAxis ..........*/
+    //设置轴为普通状态
+    unactHoverAxis(){
+        if(this.hoverAxis){
+            //样式还原
+            this.transform.unactAxis(this.hoverAxis,this.mode);
+            //变量置空
+            this.hoverAxis=null;
+            //渲染
+            this.change();
+
+        }
+    }
+    /*--->>> setObjFloatPos <<<---*/
+    //根据射线寻找鼠标滑过的浮动物体
     findFloatObj(){
         let ray= this.raycaster.ray;
         let floatObj=null;
-        //遍历可碰撞物体的浮动三角
+        //遍历可碰撞物体集合
         for(let obj of this.crashableMeshs){
             let find=false;
+            //遍历可碰撞物体的，可以被鼠标划过的，面的两个三角，一个面有三个三角
             for(let triangle of obj.floatFaces[this.view]){
+                //获取射线在三角上的焦点
                 let point=new Vector3();
-                point=ray.intersectTriangle(triangle[0],triangle[1],triangle[2],true,point)
+                //若没有焦点，intersectTriangle 会返回null
+                point=ray.intersectTriangle(triangle[0],triangle[1],triangle[2],true,point);
                 if(point){
+                    //若是找到焦点，跳出当前for 循环
                     find=true;
                     break;
                 }
             }
             if(find){
+                //若找到里焦点
+                //根据视图获取离相机最近的物体
                 if(floatObj){
                     let bool=floatObj[this.view]>obj[this.view];
                     if(['p','t','r','f'].includes(this.view)){
@@ -550,50 +881,24 @@ export default class TransformControls2 extends Group{
         return floatObj;
     }
 
-    //不分离的拖拽物体和控制器
-    dragUnsever(focus){
-        //基于鼠标获取物体位置
-        let objPos=focus.clone().sub(this.mouseSubObj);
-        //基于鼠标获取控制器位置
-        let transPos=focus.clone().sub(this.mouseSubTrans);
-        for(let i=0;i<this.axis.length;i++){
-            let axisi=this.axis[i];
-            this.object.position[axisi]=objPos[axisi];
-            this.transform.position[axisi]=transPos[axisi];
+
+    /*=======.......... keydownFn ..........=======*/
+    //可碰撞吸附的变化
+    toggleCrashable(){
+        this.crashable=!this.crashable;
+        if(!this.crashable){
+            //若不可碰撞，也就没有分离
+            this.sever=false;
         }
-        this.object.updateMatrix();
-        this.transform.updateMatrix();
+        this.crashableChange(this.crashable);
     }
-    //根据焦点设置物体的可见性
-    setVisibleByFocus(bool){
-        this.object.visible=bool;
-        this.visible=bool;
+    //可浮动的变化
+    toggleFloatable(){
+        this.floatable=!this.floatable;
+        this.floatableChange(this.crashable);
     }
-    //获取鼠标在平面上的焦点
-    getFocus(){
-        let vec3=new Vector3();
-        return this.raycaster.ray.intersectPlane(this.plane,vec3);
-    }
-    setRaycaster(event){
-        //视图点
-        let pointer=this.getPointer( event,this.domElement);
-        //获取射线
-        this.raycaster.setFromCamera( pointer, this.camera );
-    }
-    //获取初始平面
-    setInitPlane(){
-        //平面的朝向
-        let plane=null;
-        let planeAxis=this.planeAxis[this.view];
-        let planeDir=this.planeDir[this.view];
-        let vec3Plane=new  Vector3();
-        let vec3Pos=new  Vector3();
-        vec3Plane[planeAxis]=planeDir;
-        vec3Pos[planeAxis]=this.objInitPos+this.mouseSubObj[planeAxis];
-        plane=new Plane(vec3Plane);
-        plane.translate(vec3Pos);
-        this.plane=plane;
-    }
+
+    /*..........==== 其它子方法 ====..........*/
     //在透视图，轴向为有y 时的平面
     setInitPlaneInPforY(){
         let plane=null;
@@ -637,57 +942,6 @@ export default class TransformControls2 extends Group{
         }
         return axis;
     }
-    //激活选择的轴
-    actAxis(axiss=this.axis){
-        let picker=this.transform.getObjectByName(this.mode);
-        for(let i=0;i<axiss.length;i++){
-            let axis=axiss[i];
-            let axisObj=picker.getObjectByName(axis);
-            let _this=this;
-            axisObj.children.forEach((ele)=>{
-                ele.material.opacity=.9;
-                ele.material.color.set(_this.yellow);
-            })
-        }
-
-    }
-    //还原轴
-    unactAxis(axiss=this.axis){
-        let picker=this.transform.getObjectByName(this.mode);
-        for(let i=0;i<axiss.length;i++){
-            let axis=axiss[i];
-            let axisObj=picker.getObjectByName(axis);
-            let _this=this;
-            axisObj.children.forEach((ele)=>{
-                ele.material.opacity=.5;
-                ele.material.color.set(_this.axisColor[axis]);
-            })
-        }
-
-    }
-    //从parents中获取包含子元素selected 的元素
-    getParentInArray(selected,parents){
-        let parent=null;
-        findRoot(selected);
-        function findRoot(obj){
-            if(parents.indexOf(obj)==-1){
-                if(obj.parent){
-                    findRoot(obj.parent);
-                }
-            }else{
-                parent=obj;
-            }
-        }
-        return parent;
-    }
-    //获取选择的物体
-    getIntersectObject(event,objects=this.boundAxis[this.mode]){
-        let pointer=this.getPointer( event,this.domElement);
-        //获取射线
-        this.raycaster.setFromCamera( pointer, this.camera );
-        let intersects = this.raycaster.intersectObjects( objects,true);
-        return intersects[0];
-    }
     //获取鼠标在屏幕上的点
     getPointer(event,domElement){
         const rect = domElement.getBoundingClientRect();
@@ -696,74 +950,6 @@ export default class TransformControls2 extends Group{
             y: - ( event.clientY - rect.top ) / rect.height * 2 + 1,
             button: event.button
         };
-    }
-    //附加对象
-    attach(object){
-        this.visible=true;
-        this.object=object;
-        //显示操作轴
-        let picker=this.transform.getObjectByName(this.mode);
-        picker.visible=true;
-        //可碰撞物体的删除
-        this.deleteCrashableObj(object);
-        //根据物体更新与其绑定的变换信息
-        if(!this.dummyBound){this.crtDummy()}
-        this.updateTransformAttrByObj();
-        //触发选择事件
-        if(!this.crting){
-            this.selected(object);
-        }
-
-    }
-    //分离
-    detach(){
-        //触发物体取消徐选择事件
-        this.unselected();
-        //可碰撞物体的载入
-        this.addCrashableObj(this.object);
-        //控制轴、虚拟物体都不可见
-        this.visible=false;
-        //当前选择物体置空
-        this.object=null;
-        //取消选择轴
-        this.setAxis(null);
-        //没有划上的轴
-        this.hoverAxis=null;
-
-    }
-    //根据物体更新与其绑定的变换信息
-    updateTransformAttrByObj(){
-        //object 的中心点
-        let center=this.getObjectCenter(this.object);
-        let pos=this.object.position.clone();
-        //控制器位置
-        this.transform.position.copy(center);
-        //缩放控制器
-        this.setScalar();
-        //平面偏移位置
-        let planeAxis=this.planeAxis[this.view];
-        this.objInitPos=pos[planeAxis];
-        this.transInitPos=this.transform.position[planeAxis];
-        //控制器位置减去物体位置
-        this.transSubObj=center.clone().sub(pos);
-        //物体中心位置减去物体位置
-        this.centerSubObj=center.clone().sub(pos);
-        //根据实际物体位置设置虚拟物体位置
-        this.setDummyPosByObj();
-        //存储虚拟物体的尺寸
-        this.saveDummySize();
-        //物体位置减其六个边界的位置
-        this.setObjSubBound();
-
-        this.floatObj=null;
-    }
-    //根据物体，设置鼠标与其它点位的位置关系
-    //适用于crting 状态下，拖拽的物体
-    updateMouseAttrByObj(){
-        let point=this.getObjectCenter();
-        this.mouseSubObj=this.getMouseSubObj(point);
-        this.mouseSubCenter=this.getMouseSubCenter(point);
-        this.mouseSubTrans=this.getMouseSubTrans(point);
     }
     //物体位置减其六个边界的位置
     setObjSubBound(){
@@ -789,33 +975,11 @@ export default class TransformControls2 extends Group{
         //box3.expandByScalar(this.cameraToObjectRad()/this.dummyBoundExpandScale);
         this.dummyBound.box=box3;
     }
-
     //存储虚拟物体的尺寸
     saveDummySize(){
         let whd=new Vector3();
         whd=this.dummyBound.box.getSize(whd);
         this.dummyBound.whd=whd;
-    }
-    //设置虚拟边界对象的Box，基于鼠标位置，鼠标减中心点和边界盒子的长宽高
-    setDummyPosByMouse(point){
-        //盒子的中心点
-        //焦点减鼠标减中心点的位置
-        let boxCenter=point.clone().sub(this.mouseSubCenter);
-        let dis=this.dummyBound.whd.clone().divideScalar(2);
-        let min1=boxCenter.clone().sub(dis);
-        let max1=boxCenter.clone().add(dis);
-        let box2=this.dummyBound.box;
-        let min2=box2.min;
-        let max2=box2.max;
-        let axis=this.axis;
-        for(let i=0;i<axis.length;i++){
-            let axisi=axis[i];
-            min2[axisi]=min1[axisi];
-            max2[axisi]=max1[axisi];
-        }
-        let box3=new Box3(min2,max2);
-        this.dummyBound.box=box3;
-        //this.dummyBound.updateMatrixWorld();
     }
     //获取物体中心
     getObjectCenter(object=this.object){
@@ -823,169 +987,6 @@ export default class TransformControls2 extends Group{
         box3.setFromObject(object);
         let center=new Vector3();
         return box3.getCenter(center);
-    }
-
-    //建立虚拟物体
-    crtDummy(){
-        if(!this.object){return}
-        this.dummyBound = new Box3Helper();
-        this.dummyBound.material.color.set(0x38ffff);
-        this.dummyBound.material.depthTest=false;
-        this.dummyBound.material.depthWrite=false;
-        this.add( this.dummyBound );
-    }
-    //建立控制器
-    crtTransform(){
-        this.transform=new Group();
-        this.add(this.transform);
-
-        let gizmoMaterial = new MeshBasicMaterial({
-            depthTest: false,
-            depthWrite: false,
-            transparent: true,
-            opacity:.5,
-            fog: false
-        });
-
-        let matBound=gizmoMaterial.clone();
-        matBound.opacity=0;
-
-        let matRed = gizmoMaterial.clone();
-        matRed.color.set( this.axisColor.x );
-
-        let matGreen = gizmoMaterial.clone();
-        matGreen.color.set( this.axisColor.z );
-
-        let matBlue = gizmoMaterial.clone();
-        matBlue.color.set( this.axisColor.y );
-
-        let matWhite = gizmoMaterial.clone();
-        matWhite.color.set( this.axisColor.xyz );
-
-        /*移动*/
-        /*移动轴*/
-        //中心盒子
-        let box=new BoxBufferGeometry(.1,.1,.1);
-        //轴
-        let cylinder=new CylinderBufferGeometry(0.035, 0.035, 1, 4, 1, false);
-        let m = new Matrix4();
-        m.makeTranslation(0,.55,0);
-        m.applyToBufferAttribute(cylinder.attributes.position);
-        //箭头
-        let arrow = new CylinderBufferGeometry( 0, 0.06, 0.3, 6, 1, false);
-        m = new Matrix4();
-        m.makeTranslation(0,1.2,0);
-        m.applyToBufferAttribute(arrow.attributes.position);
-
-        let translateLineY=new Mesh( cylinder, matBlue );
-        let translateArrowY=new Mesh( arrow, matBlue );
-        translateLineY.name='y-translateLine';
-        translateArrowY.name='y-translateArrow';
-
-        let translateLineX=translateLineY.clone();
-        translateLineX.material=matRed;
-        translateLineX.rotateZ(-Math.PI/2);
-        let translateArrowX=translateArrowY.clone();
-        translateArrowX.material=matRed;
-        translateArrowX.rotateZ(-Math.PI/2);
-        translateLineX.name='x-translateLine';
-        translateArrowX.name='x-translateArrow';
-
-        let translateLineZ=translateLineY.clone();
-        translateLineZ.material=matGreen;
-        translateLineZ.rotateX(Math.PI/2);
-        let translateArrowZ=translateArrowY.clone();
-        translateArrowZ.material=matGreen;
-        translateArrowZ.rotateX(Math.PI/2);
-        translateLineZ.name='z-translateLine';
-        translateArrowZ.name='z-translateArrow';
-
-        let translateY=new Group();
-        translateY.name='y';
-        translateY.add(translateLineY);
-        translateY.add(translateArrowY);
-
-        let translateX=new Group();
-        translateX.name='x';
-        translateX.add(translateLineX);
-        translateX.add(translateArrowX);
-
-        let translateZ=new Group();
-        translateZ.name='z';
-        translateZ.add(translateLineZ);
-        translateZ.add(translateArrowZ);
-
-        let translateXYZ=new Mesh(box,matWhite);
-        translateXYZ.name='xyz';
-
-        let PickerTranslate=new Group();
-        PickerTranslate.name='translate';
-
-        PickerTranslate.add(translateXYZ);
-        PickerTranslate.add(translateX);
-        PickerTranslate.add(translateZ);
-        PickerTranslate.add(translateY);
-
-        PickerTranslate.visible=false;
-
-        /*移动包围盒*/
-        let transBoundBox=new BoxBufferGeometry(.15,1.3,.15);
-        m = new Matrix4();
-        m.makeTranslation(0,.75,0);
-        m.applyToBufferAttribute(transBoundBox.attributes.position);
-
-        let transBoundY=new Mesh(transBoundBox,matBound);
-        transBoundY.name='y-transBound';
-        this.boundAxis.translate.push(transBoundY);
-
-        let transBoundX=transBoundY.clone();
-        transBoundX.name='x-transBound';
-        transBoundX.material=matBound;
-        transBoundX.rotateZ(-Math.PI/2);
-        this.boundAxis.translate.push(transBoundX);
-
-
-        let transBoundZ=transBoundY.clone();
-        transBoundZ.name='z-transBound';
-        transBoundZ.material=matBound;
-        transBoundZ.rotateX(Math.PI/2);
-        this.boundAxis.translate.push(transBoundZ);
-
-        PickerTranslate.add(transBoundY);
-        PickerTranslate.add(transBoundX);
-        PickerTranslate.add(transBoundZ);
-
-        this.transform.add(PickerTranslate);
-
-        /*旋转*/
-        //...
-
-        /*缩放*/
-        //...
-
-
-
-    }
-    setMode(){
-
-    }
-    showAxis(){
-
-    }
-    setScalar(){
-        let rad=this.cameraToObjectRad();
-        if(this.expandRad===rad){return}
-        this.transform.scale.set( 1, 1, 1 ).multiplyScalar(rad);
-        /*let dummyBound=this.dummyBound;
-        if(dummyBound&&dummyBound.box){
-            //存在虚拟盒子
-            //先缩回去
-            dummyBound.box.expandByScalar(-this.expandRad/this.dummyBoundExpandScale);
-            //再重新放大
-            dummyBound.box.expandByScalar(rad/this.dummyBoundExpandScale);
-        }*/
-        this.expandRad=rad;
-
     }
     //获取相机到物体的恒定比
     cameraToObjectRad(){
@@ -1011,110 +1012,11 @@ export default class TransformControls2 extends Group{
         //可碰撞物体的载入
         this.addCrashableObj(furn);
     }
-    //可碰撞物体的载入
-    addCrashableObj(furn){
-        if(!furn){return}
-        for(let crashableMesh of this.crashableMeshs){
-            if (crashableMesh.furnId===furn.id){
-                //return 会终止循环和方法内的单线程
-                return;
-            }
-        }
-        let _this=this;
-        findChild(furn);
-        function findChild(obj){
-            if(obj.children.length){
-                obj.children.forEach((ele)=>{
-                    findChild(ele);
-                })
-            }else{
-                //计算其box 边界
-                let box=_this.getBox(obj);
-                let {min,max}=box;
-                let [l,b,c,r,t,f]=[min.x,min.y,min.z,max.x,max.y,max.z];
-                _this.crashableMeshs.push({
-                    id:obj.id,
-                    furnId:furn.id,
-                    floatFaces:_this.getFloatFace(l,b,c,r,t,f),
-                    p:t,
-                    box,l,b,c,r,t,f
-                })
-            }
-        }
-    }
-    //浮动检测
-    checkFloat(){
-
-    }
-    //获取可碰撞物体的浮动面
-    getFloatFace(l,b,c,r,t,f){
-        let [ltc,ltf,rtf,rtc,lbc,lbf,rbf,rbc]=[
-            new Vector3(l,t,c),
-            new Vector3(l,t,f),
-            new Vector3(r,t,f),
-            new Vector3(r,t,c),
-            new Vector3(l,b,c),
-            new Vector3(l,b,f),
-            new Vector3(r,b,f),
-            new Vector3(r,b,c),
-        ]
-        return {
-            p:[[ltc,ltf,rtf],[rtf,rtc,ltc]],
-            t:[[ltc,ltf,rtf],[rtf,rtc,ltc]],
-            b:[[lbf,lbc,rbc],[rbc,rbf,lbf]],
-            f:[[ltf,lbf,rbf],[rbf,rtf,ltf]],
-            c:[[rtc,rbc,lbc],[lbc,ltc,rtc]],
-            l:[[ltc,lbc,lbf],[lbf,ltf,ltc]],
-            r:[[rtf,rbf,rbc],[rbc,rtc,rtf]],
-        }
-    }
-    //可碰撞物体的删除
-    deleteCrashableObj(furn){
-        let arr=[];
-        this.crashableMeshs.forEach((ele,ind)=>{
-            if(ele.furnId!==furn.id){
-                arr.push(ele)
-            }
-        })
-        this.crashableMeshs=arr;
-    }
     //获取边界盒子
     getBox(object){
         let box3=new Box3();
         box3.setFromObject(object);
         return box3;
-    }
-    //根据view 设置拖拽轴
-    setDragAxisByView(){
-        switch (this.view){
-            case 'p':
-            case 'b':
-            case 't':
-                this.setAxis('xz');
-                break;
-            case 'f':
-            case 'c':
-                this.setAxis('xy');
-                break;
-            case 'l':
-            case 'r':
-                this.setAxis('zy');
-                break;
-        }
-    }
-    //可碰撞吸附的变化
-    toggleCrashable(){
-        this.crashable=!this.crashable;
-        if(!this.crashable){
-            this.sever=false;
-        }
-        this.crashableChange(this.crashable);
-    }
-    //可浮动的变化
-    toggleFloatable(){
-        this.floatable=!this.floatable;
-        //this.events['floatable-change']({value:this.crashable});
-        this.floatableChange(this.crashable);
     }
 
     /*事件当触发*/
