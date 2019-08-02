@@ -1,32 +1,9 @@
 /**
  * @author arodic / https://github.com/arodic
  */
-import {
-    Scene, PerspectiveCamera, WebGLRenderer, Color,
-    Geometry,
-    AxesHelper, PlaneGeometry, PlaneBufferGeometry, SphereGeometry, BoxGeometry, CylinderGeometry, Plane,
-    BufferGeometry, CylinderBufferGeometry, BoxBufferGeometry,
-    BufferAttribute,
-    Sprite,
-    MeshBasicMaterial, MeshLambertMaterial, PointsMaterial, LineBasicMaterial, SpriteMaterial, MeshPhongMaterial,
-    Points, Mesh, Line, SkinnedMesh,
-    AmbientLight, SpotLight, PointLight, DirectionalLight,
-    Fog,
-    Vector2, Vector3, Face3,
-    Group,
-    KeyframeTrack, AnimationClip, AnimationMixer,
-    Clock,
-    ObjectLoader, AudioLoader,
-    Bone, SkeletonHelper,
-    AudioListener,
-    PositionalAudio, Audio,
-    AudioAnalyser,
-    Raycaster,
-    DirectionalLightHelper,
-    Box3, Box3Helper,
-    Object3D,
-    Matrix4,
-    Quaternion, TorusBufferGeometry,
+import {CylinderBufferGeometry, BoxBufferGeometry,
+    MeshBasicMaterial, Mesh,Group,ArcCurve,EllipseCurve,Line,
+    Matrix4, TorusBufferGeometry,BufferGeometry,LineBasicMaterial,
 } from 'three'
 import Crash from '@/com/Crash'
 
@@ -44,12 +21,10 @@ export default class TransformMesh extends Group{
         };
         //激活色
         this.yellow=0xffff00;
-        //材质
+
+        //透明材质
         this.matWrapper=null;
-        this.matRed=null;
-        this.matBlue=null;
-        this.matGreen=null;
-        this.matWhite=null;
+
         //轴的包围器，用于轴选择
         this.axisWrapper={
             translate:[],
@@ -68,8 +43,16 @@ export default class TransformMesh extends Group{
         //初始化旋转网格
         this.initRotation();
     }
-    //初始化公共材质
     initMat(){
+        this.matWrapper= new MeshBasicMaterial({
+            depthTest: false,
+            depthWrite: false,
+            transparent: true,
+            opacity:0
+        });
+    }
+    //初始化移动网格
+    initTranslate(){
         //轴的基本材质
         let gizmoMaterial = new MeshBasicMaterial({
             depthTest: false,
@@ -78,23 +61,17 @@ export default class TransformMesh extends Group{
             opacity:.5,
             fog: false
         });
-        //包裹包裹材质，不可见
-        this.matWrapper=gizmoMaterial.clone();
-        this.matWrapper.opacity=0;
         //红蓝绿轴的材质
-        this.matRed = gizmoMaterial.clone();
-        this.matRed.color.set( this.axisColor.x );
-        this.matBlue = gizmoMaterial.clone();
-        this.matBlue.color.set( this.axisColor.y );
-        this.matGreen = gizmoMaterial.clone();
-        this.matGreen.color.set( this.axisColor.z );
+        let matRed = gizmoMaterial.clone();
+        matRed.color.set( this.axisColor.x );
+        let matBlue = gizmoMaterial.clone();
+        matBlue.color.set( this.axisColor.y );
+        let matGreen = gizmoMaterial.clone();
+        matGreen.color.set( this.axisColor.z );
         //白色中间盒子材质
-        this.matWhite = gizmoMaterial.clone();
-        this.matWhite.color.set( this.axisColor.xyz );
+        let matWhite = gizmoMaterial.clone();
+        matWhite.color.set( this.axisColor.xyz );
 
-    }
-    //初始化移动网格
-    initTranslate(){
         /*移动*/
         /*移动轴*/
         //轴模型
@@ -111,19 +88,19 @@ export default class TransformMesh extends Group{
         let box=new BoxBufferGeometry(.1,.1,.1);
 
         //yxz 轴和箭头的网格
-        let translateLineY=new Mesh( cylinder, this.matBlue );
-        let translateArrowY=new Mesh( arrow, this.matBlue );
+        let translateLineY=new Mesh( cylinder, matBlue );
+        let translateArrowY=new Mesh( arrow, matBlue );
         let translateLineX=translateLineY.clone();
-        translateLineX.material=this.matRed;
+        translateLineX.material=matRed;
         translateLineX.rotateZ(-Math.PI/2);
         let translateArrowX=translateArrowY.clone();
-        translateArrowX.material=this.matRed;
+        translateArrowX.material=matRed;
         translateArrowX.rotateZ(-Math.PI/2);
         let translateLineZ=translateLineY.clone();
-        translateLineZ.material=this.matGreen;
+        translateLineZ.material=matGreen;
         translateLineZ.rotateX(Math.PI/2);
         let translateArrowZ=translateArrowY.clone();
-        translateArrowZ.material=this.matGreen;
+        translateArrowZ.material=matGreen;
         translateArrowZ.rotateX(Math.PI/2);
         //yxz 轴和箭头的网格打包
         let translateY=new Group();
@@ -139,7 +116,7 @@ export default class TransformMesh extends Group{
         translateZ.add(translateLineZ);
         translateZ.add(translateArrowZ);
         //盒子网格
-        let translateBox=new Mesh(box,this.matWhite);
+        let translateBox=new Mesh(box,matWhite);
         translateBox.name='xyz-translate';
 
         /*移动包围盒*/
@@ -182,19 +159,44 @@ export default class TransformMesh extends Group{
         this.add(pickerTranslate);
     }
     initRotation(){
-        let geometry = new TorusBufferGeometry( 1.3, .035, 8, 30);
-        let rotateZ = new Mesh( geometry, this.matGreen );
+        //轴的基本材质
+        let gizmoMaterial = new LineBasicMaterial({
+            depthTest: false,
+            depthWrite: false,
+            transparent: true,
+            fog: false
+        });
+        //红蓝绿轴的材质
+        let matRed = gizmoMaterial.clone();
+        matRed.color.set( this.axisColor.x );
+        let matBlue = gizmoMaterial.clone();
+        matBlue.color.set( this.axisColor.y );
+        let matGreen = gizmoMaterial.clone();
+        matGreen.color.set( this.axisColor.z );
+
+
+        //let geometry = new TorusBufferGeometry( 1.3, .035, 8, 30);
+        let geometry = new BufferGeometry();
+        let arc = new EllipseCurve(
+            0,0,
+            1.3,1.3,
+            0, 2 * Math.PI,
+            false,
+            0
+        );
+        let points = arc.getPoints( 50 );
+        geometry.setFromPoints(points);
+
+        let rotateZ = new Line( geometry, matGreen );
         rotateZ.name='z-rotate';
         let rotateY = rotateZ.clone();
         rotateY.rotateX(Math.PI/2);
-        rotateY.material=this.matBlue;
+        rotateY.material=matBlue;
         rotateY.name='y-rotate';
         let rotateX = rotateZ.clone();
         rotateX.rotateY(Math.PI/2);
-        rotateX.material=this.matRed;
+        rotateX.material=matRed;
         rotateX.name='x-rotate';
-
-
 
         let geometryBound = new TorusBufferGeometry( 1.3,0.2,3,18);
         //let rotateBoundY=new Mesh( geometryBound, this.matWrapper );
