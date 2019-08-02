@@ -1,5 +1,5 @@
 import {
-    Scene,PerspectiveCamera,WebGLRenderer,Color,AxesHelper,BoxBufferGeometry,MeshLambertMaterial,Mesh,AmbientLight,DirectionalLight,Vector3,OrthographicCamera
+    Scene,PerspectiveCamera,WebGLRenderer,Color,AxesHelper,BoxBufferGeometry,MeshLambertMaterial,Mesh,AmbientLight,DirectionalLight,Vector3,OrthographicCamera,TorusBufferGeometry,MeshBasicMaterial
 } from 'three';
 import OrbitControls from 'three-orbitcontrols'
 import DiTai from '@/furns/DiTai'
@@ -70,7 +70,6 @@ export default class WebglPart{
         this.initRenderer();
         //场景
         this.scene=new Scene();
-
         this.camera=this.getCamera('p');
         //变换控制器
         this.transCtrl2=new TransformControls2(this.camera,this.domElement);
@@ -79,6 +78,8 @@ export default class WebglPart{
         this.orbitCtrl = new OrbitControls(this.camera,this.domElement);
         //建立辅助物体
         this.crtHelpObj();
+        //测试模型
+        this.test();
         //初始化光
         this.initLight();
         //渲染
@@ -164,10 +165,15 @@ export default class WebglPart{
         this.scene.add(boxMesh);
         //machine(可选对象，是否可吸附)
         this.transCtrl2.machine(boxMesh,true);
-        /*this.transCtrl2.attach(boxMesh);
-        let axesHelper = new AxesHelper(20);
+
+        //手动选择
+        this.transCtrl2.attach(boxMesh);
+        /*let axesHelper = new AxesHelper(20);
         axesHelper.translateY(.001);
         this.scene.add(axesHelper);*/
+    }
+    test(){
+
     }
     getCamera(key){
         if(key==='p'){
@@ -294,6 +300,9 @@ export default class WebglPart{
         let transCtrl2=this.transCtrl2;
         //正在创建家具
         transCtrl2.crting=true;
+        //切换视图
+        transCtrl2.setMode('translate');
+
         //取消当前选择
         if(transCtrl2.object){
             transCtrl2.detach();

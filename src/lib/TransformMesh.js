@@ -2,31 +2,31 @@
  * @author arodic / https://github.com/arodic
  */
 import {
-    Scene,PerspectiveCamera,WebGLRenderer,Color,
+    Scene, PerspectiveCamera, WebGLRenderer, Color,
     Geometry,
-    AxesHelper,PlaneGeometry,PlaneBufferGeometry,SphereGeometry,BoxGeometry,CylinderGeometry,Plane,
-    BufferGeometry,CylinderBufferGeometry,BoxBufferGeometry,
+    AxesHelper, PlaneGeometry, PlaneBufferGeometry, SphereGeometry, BoxGeometry, CylinderGeometry, Plane,
+    BufferGeometry, CylinderBufferGeometry, BoxBufferGeometry,
     BufferAttribute,
     Sprite,
-    MeshBasicMaterial,MeshLambertMaterial,PointsMaterial,LineBasicMaterial,SpriteMaterial,MeshPhongMaterial,
-    Points,Mesh,Line,SkinnedMesh,
-    AmbientLight,SpotLight,PointLight,DirectionalLight,
+    MeshBasicMaterial, MeshLambertMaterial, PointsMaterial, LineBasicMaterial, SpriteMaterial, MeshPhongMaterial,
+    Points, Mesh, Line, SkinnedMesh,
+    AmbientLight, SpotLight, PointLight, DirectionalLight,
     Fog,
-    Vector2,Vector3,Face3,
+    Vector2, Vector3, Face3,
     Group,
-    KeyframeTrack,AnimationClip,AnimationMixer,
+    KeyframeTrack, AnimationClip, AnimationMixer,
     Clock,
-    ObjectLoader,AudioLoader,
-    Bone,SkeletonHelper,
+    ObjectLoader, AudioLoader,
+    Bone, SkeletonHelper,
     AudioListener,
-    PositionalAudio,Audio,
+    PositionalAudio, Audio,
     AudioAnalyser,
     Raycaster,
     DirectionalLightHelper,
-    Box3,Box3Helper,
+    Box3, Box3Helper,
     Object3D,
     Matrix4,
-    Quaternion,
+    Quaternion, TorusBufferGeometry,
 } from 'three'
 import Crash from '@/com/Crash'
 
@@ -127,88 +127,136 @@ export default class TransformMesh extends Group{
         translateArrowZ.rotateX(Math.PI/2);
         //yxz 轴和箭头的网格打包
         let translateY=new Group();
-        translateY.name='y';
+        translateY.name='y-translate';
         translateY.add(translateLineY);
         translateY.add(translateArrowY);
         let translateX=new Group();
-        translateX.name='x';
+        translateX.name='x-translate';
         translateX.add(translateLineX);
         translateX.add(translateArrowX);
         let translateZ=new Group();
-        translateZ.name='z';
+        translateZ.name='z-translate';
         translateZ.add(translateLineZ);
         translateZ.add(translateArrowZ);
         //盒子网格
         let translateBox=new Mesh(box,this.matWhite);
-        translateBox.name='xyz';
+        translateBox.name='xyz-translate';
 
         /*移动包围盒*/
         //包围盒模型
-        let transBoundBox=new BoxBufferGeometry(.15,1.3,.15);
+        let translateBoundBox=new BoxBufferGeometry(.15,1.3,.15);
         m = new Matrix4();
         m.makeTranslation(0,.75,0);
-        m.applyToBufferAttribute(transBoundBox.attributes.position);
+        m.applyToBufferAttribute(translateBoundBox.attributes.position);
         //xyz 包围盒网格
-        let transBoundY=new Mesh(transBoundBox,this.matWrapper);
-        transBoundY.name='y-transBound';
-        let transBoundX=transBoundY.clone();
-        transBoundX.name='x-transBound';
-        transBoundX.rotateZ(-Math.PI/2);
-        let transBoundZ=transBoundY.clone();
-        transBoundZ.name='z-transBound';
-        transBoundZ.rotateX(Math.PI/2);
+        let translateBoundY=new Mesh(translateBoundBox,this.matWrapper);
+        translateBoundY.name='y-translateBound';
+        let translateBoundX=translateBoundY.clone();
+        translateBoundX.name='x-translateBound';
+        translateBoundX.rotateZ(-Math.PI/2);
+        let translateBoundZ=translateBoundY.clone();
+        translateBoundZ.name='z-translateBound';
+        translateBoundZ.rotateX(Math.PI/2);
 
         //移动控制器
         //展示模型
-        let PickerTranslate=new Group();
-        PickerTranslate.name='translate';
-        PickerTranslate.add(translateBox);
-        PickerTranslate.add(translateX);
-        PickerTranslate.add(translateZ);
-        PickerTranslate.add(translateY);
+        let pickerTranslate=new Group();
+        pickerTranslate.name='translate';
+        pickerTranslate.add(translateBox);
+        pickerTranslate.add(translateX);
+        pickerTranslate.add(translateZ);
+        pickerTranslate.add(translateY);
         //包裹模型
-        PickerTranslate.add(transBoundY);
-        PickerTranslate.add(transBoundX);
-        PickerTranslate.add(transBoundZ);
+        pickerTranslate.add(translateBoundY);
+        pickerTranslate.add(translateBoundX);
+        pickerTranslate.add(translateBoundZ);
         //默认不可见
-        PickerTranslate.visible=false;
+        pickerTranslate.visible=false;
 
         //将包裹模型添加到轴的包裹器里
-        this.axisWrapper.translate.push(transBoundY);
-        this.axisWrapper.translate.push(transBoundX);
-        this.axisWrapper.translate.push(transBoundZ);
+        this.axisWrapper.translate.push(translateBoundY);
+        this.axisWrapper.translate.push(translateBoundX);
+        this.axisWrapper.translate.push(translateBoundZ);
 
         //变换对象
-        this.add(PickerTranslate);
+        this.add(pickerTranslate);
     }
     initRotation(){
+        let geometry = new TorusBufferGeometry( 1.3, .035, 8, 30);
+        let rotateZ = new Mesh( geometry, this.matGreen );
+        rotateZ.name='z-rotate';
+        let rotateY = rotateZ.clone();
+        rotateY.rotateX(Math.PI/2);
+        rotateY.material=this.matBlue;
+        rotateY.name='y-rotate';
+        let rotateX = rotateZ.clone();
+        rotateX.rotateY(Math.PI/2);
+        rotateX.material=this.matRed;
+        rotateX.name='x-rotate';
 
+
+
+        let geometryBound = new TorusBufferGeometry( 1.3,0.2,3,18);
+        //let rotateBoundY=new Mesh( geometryBound, this.matWrapper );
+        let rotateBoundZ=new Mesh( geometryBound, this.matWrapper );
+        rotateBoundZ.name='z-rotateBound';
+        let rotateBoundY=rotateBoundZ.clone();
+        rotateBoundY.name='y-rotateBound';
+        rotateBoundY.rotateX(Math.PI/2);
+        let rotateBoundX=rotateBoundZ.clone();
+        rotateBoundX.name='x-rotateBound';
+        rotateBoundX.rotateY(Math.PI/2);
+
+        let pickerRotate=new Group();
+        pickerRotate.name='rotate';
+
+        pickerRotate.add(rotateZ);
+        pickerRotate.add(rotateY);
+        pickerRotate.add(rotateX);
+
+        pickerRotate.add(rotateBoundZ);
+        pickerRotate.add(rotateBoundY);
+        pickerRotate.add(rotateBoundX);
+
+        //默认不可见
+        pickerRotate.visible=false;
+
+        //将包裹模型添加到轴的包裹器里
+        this.axisWrapper.rotate.push(rotateBoundZ);
+        this.axisWrapper.rotate.push(rotateBoundY);
+        this.axisWrapper.rotate.push(rotateBoundX);
+
+        this.add(pickerRotate);
     }
     //激活选择的轴
     actAxis(axiss,mode){
-        let picker=this.getObjectByName(mode);
-        for(let i=0;i<axiss.length;i++){
-            let axis=axiss[i];
-            let axisObj=picker.getObjectByName(axis);
-            let _this=this;
-            axisObj.children.forEach((ele)=>{
-                ele.material.opacity=.9;
-                ele.material.color.set(_this.yellow);
-            })
-        }
+        this.loopAxis(axiss,mode,(mat)=>{
+            mat.opacity=.9;
+            mat.color.set(this.yellow);
+        })
 
     }
     //还原轴
     unactAxis(axiss,mode){
+        this.loopAxis(axiss,mode,(mat,axis)=>{
+            mat.opacity=.5;
+            mat.color.set(this.axisColor[axis]);
+        })
+    }
+    loopAxis(axiss,mode,fn){
         let picker=this.getObjectByName(mode);
         for(let i=0;i<axiss.length;i++){
             let axis=axiss[i];
-            let axisObj=picker.getObjectByName(axis);
+            let axisObj=picker.getObjectByName(`${axis}-${mode}`);
             let _this=this;
-            axisObj.children.forEach((ele)=>{
-                ele.material.opacity=.5;
-                ele.material.color.set(_this.axisColor[axis]);
-            })
+            if(axisObj.children.length){
+                axisObj.children.forEach((ele)=>{
+                    fn(ele.material,axis);
+                })
+            }else{
+                fn(axisObj.material,axis);
+            }
+
         }
     }
 }

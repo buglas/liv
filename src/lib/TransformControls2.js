@@ -39,8 +39,8 @@ export default class TransformControls2 extends Group{
         this.domElement=domElement;
         //当前选择对轴
         this.axis=null;
-        //模式：位移translate，旋转rotation，缩放scale
-        this.mode='translate';
+        //模式：位移 translate，旋转 rotate，缩放scale
+        this.mode='rotate';
         //选择的对象
         this.object=null;
         //所有事件无效
@@ -246,10 +246,18 @@ export default class TransformControls2 extends Group{
                 //根据物体更新与其绑定的控制器信息
                 this.updateTransformAttrByObj();
             }
-            //检测碰撞，吸附物体
-            this.checkCrash();
-            //移动物体
-            this.moveObj(event);
+            if(this.mode==='translate'){
+                //如果是移动模式
+                //检测碰撞，吸附物体
+                this.checkCrash();
+                //移动物体
+                this.moveObj(event);
+            }else if(this.mode==='rotate'){
+                //如果是旋转模式
+                //旋转物体
+
+            }
+
             //恒定控制器大小
             this.setScalar();
             //需渲染
@@ -727,12 +735,14 @@ export default class TransformControls2 extends Group{
         //获取划上的轴
         let curSelected=this.getIntersectAxis(event);
         if(curSelected){
-            //提取关键轴信息，x y z
+            console.log('selected');
+            //提取关键轴信息，x y z,实际应该提起'-' 之前的部分
             let curHoverAxis=curSelected.object.name[0];
             if(this.hoverAxis===curHoverAxis){
                 //轴相同，则返回
                 return
             }else{
+                console.log('curHoverAxis',curHoverAxis);
                 //轴不同，先恢复原始轴状态
                 this.unactHoverAxis();
                 //更新划上轴
@@ -1002,6 +1012,15 @@ export default class TransformControls2 extends Group{
         }
         return rad;
     }
+    //设置mode
+    setMode(mode){
+        if(this.mode===mode){return}
+        this.transform.getObjectByName(this.mode).visible=false;
+        this.transform.getObjectByName(mode).visible=true;
+        this.mode=mode;
+
+        this.modeChange(mode);
+    }
 
     /*与轴无关的东东*/
     //加工数据
@@ -1035,6 +1054,10 @@ export default class TransformControls2 extends Group{
     //可浮动属性改变时，触发此事件。用于前端相关按钮的显示
     floatableChange(value){
         this.dispatchEvent({type:'floatable-change',value:value});
+    }
+    //mode 改变时
+    modeChange(value){
+        this.dispatchEvent({type:'mode-change',value:value});
     }
     //家具创建成功后。用于响应前端状态
     crted(){

@@ -62,11 +62,3 @@ page.onCrtForm=(inpsDom)=>{
 
 
 
-/*//初始化节点高度
-page.initDomSize();
-//初始化家具类型
-page.updateFurnType(furnTypes);
-//初始化家具按钮
-page.updateFurnBtns();*/
-
-
