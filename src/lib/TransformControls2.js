@@ -48,7 +48,10 @@ export default class TransformControls2 extends Group{
         //鼠标划上无效
         this.hoverEnable=true;
         //貌似一个鼠标位就可以解决很多问题，先放放，继续梳理---------------
+        //鼠标点在某个面上的世界为
         this.mousePos=new Vector3();
+        //鼠标的视图位置，即点击在canvas 上的位置 mousePosOnViewWhenMouseDown
+        this.mousePosOvwd={x:null,y:null};
         //鼠标点击位减去所选物体位置
         this.mouseSubObj=new Vector3();
         //鼠标点击位减去物体中心，以方便以鼠标为基准移动边界
@@ -149,6 +152,13 @@ export default class TransformControls2 extends Group{
         this.expandRad=0;
         //虚拟物体的缩放系数
         this.dummyBoundExpandScale=200;
+        //视图高度
+        this.viewH=0;
+        //物体的中心位是否是物体的位置
+        this.posIsCenter=false;
+        //旋转步幅，默认15 度
+        this.rotateSpace=15;
+        //
         //初始化
         this.init();
     }
@@ -245,6 +255,8 @@ export default class TransformControls2 extends Group{
                 this.updateMouseAttrByObj();
                 //根据物体更新与其绑定的控制器信息
                 this.updateTransformAttrByObj();
+                //恒定控制器大小
+                this.setScalar();
             }
             if(this.mode==='translate'){
                 //如果是移动模式
@@ -254,12 +266,8 @@ export default class TransformControls2 extends Group{
                 this.moveObj(event);
             }else if(this.mode==='rotate'){
                 //如果是旋转模式
-                //旋转物体
-
+               this.rotateObj(event);
             }
-
-            //恒定控制器大小
-            this.setScalar();
             //需渲染
             this.change();
             //触发位置改变事件
@@ -282,6 +290,22 @@ export default class TransformControls2 extends Group{
                 case 'F':
                     //浮动开关
                     this.toggleFloatable();
+                    break;
+            }
+        }else{
+            switch (event.key) {
+                case 'w':
+                    //移动模式开关
+                    this.setMode('translate');
+                    //须渲染
+                    this.change();
+                    break;
+                case 'r':
+                    console.log('r');
+                    //旋转模式开关
+                    this.setMode('rotate');
+                    //须渲染
+                    this.change();
                     break;
             }
         }
@@ -372,6 +396,13 @@ export default class TransformControls2 extends Group{
         this.setMouseSubSmth(event);
         //启动拖拽事件
         this.draggingChanged(true);
+        //如果是旋转模式
+        if(this.mode==='rotate'){
+            //记录下视图点击位
+            this.mousePosOvwd=this.getClientPos( event);
+            //获取一下视图高
+            this.viewH=this.domElement.clientHeight;
+        }
         this.change();
     }
     //鼠标点击在家具上,即拖拽家具的情况
@@ -646,6 +677,9 @@ export default class TransformControls2 extends Group{
         //object 的中心点
         let center=this.getObjectCenter(this.object);
         let pos=this.object.position.clone();
+
+        this.posIsCenter=center.equals(pos);
+
         //控制器位置
         this.transform.position.copy(center);
         //缩放控制器
@@ -714,6 +748,47 @@ export default class TransformControls2 extends Group{
         }
         this.change();
     }
+    //旋转物体
+    rotateObj(event){
+        //旋转物体
+        let point=this.getClientPos(event);
+        let dist=0;
+        if(this.axis==='y'){
+            dist=point.x-this.mousePosOvwd.x;
+            this.mousePosOvwd.x=point.x;
+        }else{
+            dist=point.y-this.mousePosOvwd.y;
+            this.mousePosOvwd.y=point.y;
+        }
+        let ratio=dist/this.viewH;
+        let radian=ratio*360*4;
+        if(!radian){return}
+        console.log('radian',radian);
+        //radian=radian-radian%this.rotateSpace;
+        radian=radian*Math.PI/180;
+        if(this.axis==='x'){
+            radian=-radian;
+        }
+        //Math.PI*2
+
+        let rotateAxis=new Vector3();
+        rotateAxis[this.axis]=1;
+
+
+        if(this.posIsCenter){
+            //如果物体位就是中心位，直接旋转
+            this.object.rotateOnWorldAxis(rotateAxis,radian);
+        }else{
+            this.object.rotateOnWorldAxis(rotateAxis,radian);
+            //获取物体中心到物体位置到距离
+            this.centerSubObj=this.getObjectCenter().sub(this.object.position);
+            //将transform 位置减去此距离
+            //就是物体到决定位
+            let pos=this.transform.position.clone().sub(this.centerSubObj);
+            this.object.position.copy(pos);
+        }
+        this.setDummyPosByObj();
+    }
     //缩放控制器
     setScalar(){
         let rad=this.cameraToObjectRad();
@@ -735,14 +810,12 @@ export default class TransformControls2 extends Group{
         //获取划上的轴
         let curSelected=this.getIntersectAxis(event);
         if(curSelected){
-            console.log('selected');
             //提取关键轴信息，x y z,实际应该提起'-' 之前的部分
             let curHoverAxis=curSelected.object.name[0];
             if(this.hoverAxis===curHoverAxis){
                 //轴相同，则返回
                 return
             }else{
-                console.log('curHoverAxis',curHoverAxis);
                 //轴不同，先恢复原始轴状态
                 this.unactHoverAxis();
                 //更新划上轴
@@ -907,6 +980,16 @@ export default class TransformControls2 extends Group{
         this.floatable=!this.floatable;
         this.floatableChange(this.crashable);
     }
+    //模式设置
+    setMode(mode){
+        console.log(this.mode);
+        if(this.mode===mode){return}
+        this.transform.getObjectByName(this.mode).visible=false;
+        this.transform.getObjectByName(mode).visible=true;
+        this.mode=mode;
+        this.modeChange(mode);
+    }
+
 
     /*..........==== 其它子方法 ====..........*/
     //在透视图，轴向为有y 时的平面
@@ -961,6 +1044,13 @@ export default class TransformControls2 extends Group{
             button: event.button
         };
     }
+    //获取鼠标点击位，无转换
+    getClientPos(event){
+        return {
+            x:event.clientX,
+            y:-event.clientY
+        }
+    }
     //物体位置减其六个边界的位置
     setObjSubBound(){
         let pos=this.object.position;
@@ -993,10 +1083,8 @@ export default class TransformControls2 extends Group{
     }
     //获取物体中心
     getObjectCenter(object=this.object){
-        let box3=new Box3();
-        box3.setFromObject(object);
-        let center=new Vector3();
-        return box3.getCenter(center);
+        let box3=this.getBox(object);
+        return box3.getCenter(new Vector3());
     }
     //获取相机到物体的恒定比
     cameraToObjectRad(){
@@ -1012,15 +1100,7 @@ export default class TransformControls2 extends Group{
         }
         return rad;
     }
-    //设置mode
-    setMode(mode){
-        if(this.mode===mode){return}
-        this.transform.getObjectByName(this.mode).visible=false;
-        this.transform.getObjectByName(mode).visible=true;
-        this.mode=mode;
 
-        this.modeChange(mode);
-    }
 
     /*与轴无关的东东*/
     //加工数据
@@ -1032,7 +1112,7 @@ export default class TransformControls2 extends Group{
         this.addCrashableObj(furn);
     }
     //获取边界盒子
-    getBox(object){
+    getBox(object=this.object){
         let box3=new Box3();
         box3.setFromObject(object);
         return box3;
