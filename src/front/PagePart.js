@@ -279,6 +279,7 @@ export default class PagePart {
         });
         //基于家具变换数据，建立表单
         fragment+=this.transInp(this.posAttr,'位置 X Y Z');
+        fragment+=this.transInp(this.rotAttr,'旋转 X Y Z');
         furnForm.innerHTML=fragment;
         //更新表单的滚动状态
         this.updateFromScroll();

@@ -34,7 +34,7 @@ webglPart.transCtrl2.addEventListener('selected',(event)=>{
     mvvm.updateSubs(page.getInpsDom(),webglPart.transCtrl2.object);
 });
 //模型移动事件
-webglPart.transCtrl2.addEventListener('position-change',(event)=>{
+webglPart.transCtrl2.addEventListener('transform-change',(event)=>{
     mvvm.notify(webglPart.transCtrl2.object);
 });
 

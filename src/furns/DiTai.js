@@ -4,15 +4,16 @@
 * w h d
 * {
 * */
-import {BoxBufferGeometry,MeshLambertMaterial,Mesh,Group} from 'three'
+import {BoxBufferGeometry, MeshLambertMaterial, Mesh, Group, TextureLoader} from 'three'
 import BoxMesh  from '../Objects/BoxMesh'
 import Mats from '@/com/Mats'
 import Tool from '@/com/Tool'
 import FurnData from '@/com/FurnData'
+import Furn from '@/core/Furn'
 
 const {parseUnit}=Tool;
 const {livForm,sizeParam,matParam}=FurnData;
-class DiTai extends Group{
+class DiTai extends Furn{
     constructor(param=null){
         super();
         this.data=null;
@@ -87,7 +88,10 @@ class DiTai extends Group{
         let depth=parseUnit(this.depth);
         let height=parseUnit(this.height);
 
+
         //铝框
+        //先解析材质，将材质变成数组结构，贴图先变成颜色
+
         let meshLvK=new BoxMesh(this.getLw(),lh,this.getLd(),Mats[this.lvMat]);
         meshLvK.name='lvK';
         meshLvK.position.x=ls;
@@ -95,32 +99,23 @@ class DiTai extends Group{
         this.add(meshLvK);
 
         //台面
+        let taiMat=Mats[this.taiMat];
+        let textureLoader=new TextureLoader();
+        let _this=this;
+        /*let texture=textureLoader.load(taiMat.mapParam.imgSrc,function(){
+            console.log('wwwwwwwwwwwww');
+            taiMat.mapParam.imgSrc=texture;
+            let meshTaiM=new BoxMesh(width,height,depth,taiMat);
+            meshTaiM.name='taiM';
+            meshTaiM.translateY(lh);
+            _this.add(meshTaiM);
+        });*/
         let meshTaiM=new BoxMesh(width,height,depth, Mats[this.taiMat]);
         meshTaiM.name='taiM';
         meshTaiM.translateY(lh);
         this.add(meshTaiM);
     }
-    //监听数据
-    walk(){
-        let _this=this;
-        for(let key in this.data){
 
-            Object.defineProperty(this, key, {
-                get: function () {
-                    if(_this.data[key].get){
-                        return _this.data[key].get();
-                    }else{
-                        return _this.data[key].value;
-                    }
-
-                },
-                set: function (val) {
-                    _this.data[key].value=val;
-                    _this.data[key].set(val);
-                },
-            })
-        }
-    }
     //添加渲染方法
     checkRender(obj){
         let _this=this;
@@ -140,7 +135,6 @@ class DiTai extends Group{
                     setTimeout(function(){
                         _this.mapLoaded()
                     },100);
-                    //_this.mapLoaded();
                 }else{
                     check();
                 }
@@ -155,10 +149,7 @@ class DiTai extends Group{
     getLd(){
         return parseUnit(this.depth-this.ls*2);
     }
-    //图片加载成功后
-    mapLoaded(){
-        this.dispatchEvent({type:'map-loaded'});
-    }
+
 }
 
 DiTai.text='地台';

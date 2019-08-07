@@ -16,6 +16,13 @@ const Tool={
     //实物数据到表单数据
     parseInp(num){
         return Math.floor(parseFloat(num)/unit);
-    }
+    },
+    parseDegree(radian){
+        return Math.round(radian*180/Math.PI);
+    },
+    parseRadian(degree){
+        return Math.round(degree)*Math.PI/180;
+    },
+
 };
 export default Tool;

@@ -1,12 +1,29 @@
 import {
-    Scene,PerspectiveCamera,WebGLRenderer,Color,AxesHelper,BoxBufferGeometry,MeshLambertMaterial,Mesh,AmbientLight,DirectionalLight,Vector3,OrthographicCamera,TorusBufferGeometry,MeshBasicMaterial
+    Scene,
+    PerspectiveCamera,
+    WebGLRenderer,
+    Color,
+    AxesHelper,
+    BoxBufferGeometry,
+    MeshLambertMaterial,
+    Mesh,
+    AmbientLight,
+    DirectionalLight,
+    Vector3,
+    OrthographicCamera,
+    TorusBufferGeometry,
+    MeshBasicMaterial,
+    TextureLoader,
 } from 'three';
 import OrbitControls from 'three-orbitcontrols'
 import DiTai from '@/furns/DiTai'
 import TransformControls2 from '@/lib/TransformControls2'
-import Mats from '@/com/Mats'
+import BoxMat from '@/com/BoxMat'
 import Tool from "@/com/Tool";
+import Mats from "@/com/Mats";
+import BoxMesh from "@/Objects/BoxMesh";
 const {parseUnit}=Tool;
+
 
 
 export default class WebglPart{
@@ -154,10 +171,12 @@ export default class WebglPart{
     }
     //建立辅助物体
     crtHelpObj(){
-        let boxGeo = new  BoxBufferGeometry(.4,.2,.8);
+        /*let boxGeo = new  BoxBufferGeometry(.4,.2,.8);
         let boxMat = new  MeshLambertMaterial({
-            color: 0xff00ff
+            color: 0xff00ff,
+
         });
+
         let boxMesh = new  Mesh(boxGeo, boxMat);
         boxMesh.name='boxMesh';
         boxMesh.translateY(.1);
@@ -165,9 +184,25 @@ export default class WebglPart{
         this.scene.add(boxMesh);
         //machine(可选对象，是否可吸附)
         this.transCtrl2.machine(boxMesh,true);
-
         //手动选择
-        this.transCtrl2.attach(boxMesh);
+        this.transCtrl2.attach(boxMesh);*/
+
+        let _this=this;
+
+        let boxMesh = new  BoxMesh(.4,.2,.6,Mats.huTao);
+        boxMesh.addEventListener('mat-success',function(){
+            _this.render();
+        });
+        this.scene.add(boxMesh);
+
+        /*let matTool=new BoxMat(Mats.huTao,(matParam)=>{
+            boxMesh.setMaterial(matParam);
+            _this.render();
+        },()=>{
+            console.log('贴图加载失败');
+        });*/
+
+
         /*let axesHelper = new AxesHelper(20);
         axesHelper.translateY(.001);
         this.scene.add(axesHelper);*/
@@ -314,7 +349,6 @@ export default class WebglPart{
         diTai.visible=false;
         let _this=this;
         diTai.addEventListener('map-loaded',function(){
-            //console.log('-------map-loaded');
             _this.render();
         });
         this.scene.add(diTai);

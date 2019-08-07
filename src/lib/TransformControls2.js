@@ -158,7 +158,8 @@ export default class TransformControls2 extends Group{
         this.posIsCenter=false;
         //旋转步幅，默认15 度
         this.rotateSpace=15;
-        //
+        //每次旋转的总度数
+        this.rotateNum=0;
         //初始化
         this.init();
     }
@@ -270,8 +271,8 @@ export default class TransformControls2 extends Group{
             }
             //需渲染
             this.change();
-            //触发位置改变事件
-            this.positionChange();
+            //触发变换信息改变事件
+            this.transformChange();
         }else if (this.hoverEnable){
             //非拖拽状态
             //可划上，且轴为空
@@ -402,6 +403,8 @@ export default class TransformControls2 extends Group{
             this.mousePosOvwd=this.getClientPos( event);
             //获取一下视图高
             this.viewH=this.domElement.clientHeight;
+            //先将旋转总度数置空
+            this.rotateNum=0;
         }
         this.change();
     }
@@ -752,29 +755,38 @@ export default class TransformControls2 extends Group{
     rotateObj(event){
         //旋转物体
         let point=this.getClientPos(event);
+        //鼠标位移距离
         let dist=0;
         if(this.axis==='y'){
+            //绕y 轴旋转时，捕捉横屏距离
             dist=point.x-this.mousePosOvwd.x;
             this.mousePosOvwd.x=point.x;
         }else{
+            //绕先x,z 轴旋转时，捕捉竖屏距离
             dist=point.y-this.mousePosOvwd.y;
             this.mousePosOvwd.y=point.y;
         }
+        //以竖屏为基准判断位移比例
         let ratio=dist/this.viewH;
-        let radian=ratio*360*4;
-        if(!radian){return}
-        console.log('radian',radian);
-        //radian=radian-radian%this.rotateSpace;
-        radian=radian*Math.PI/180;
-        if(this.axis==='x'){
-            radian=-radian;
+        //用比例换算旋转角度
+        let degree=ratio*360*4;
+        //累计旋转角度
+        this.rotateNum+=degree;
+        //若角度为0，或累计旋转角度小于旋转步幅，返回
+        if(!degree||Math.abs(this.rotateNum)<this.rotateSpace){
+            return
         }
-        //Math.PI*2
-
+        //旋转角度，判断正负
+        let rotateNum=this.rotateNum<0?-this.rotateSpace:this.rotateSpace;
+        if(this.axis==='x'){
+            //若绕x 轴旋转，反一下
+            rotateNum=-rotateNum;
+        }
+        //弧度转角度
+        let radian=rotateNum*Math.PI/180;
+        //旋转轴
         let rotateAxis=new Vector3();
         rotateAxis[this.axis]=1;
-
-
         if(this.posIsCenter){
             //如果物体位就是中心位，直接旋转
             this.object.rotateOnWorldAxis(rotateAxis,radian);
@@ -787,7 +799,10 @@ export default class TransformControls2 extends Group{
             let pos=this.transform.position.clone().sub(this.centerSubObj);
             this.object.position.copy(pos);
         }
+        //根据物体位更新虚拟对象位
         this.setDummyPosByObj();
+        //旋转积数置空
+        this.rotateNum=0;
     }
     //缩放控制器
     setScalar(){
@@ -1152,7 +1167,7 @@ export default class TransformControls2 extends Group{
         this.dispatchEvent({type:'selected',value:value});
     }
     //家具位置的改变时
-    positionChange(value=this.object){
-        this.dispatchEvent({type:'position-change',value:value});
+    transformChange(value=this.object){
+        this.dispatchEvent({type:'transform-change',value:value});
     }
 }

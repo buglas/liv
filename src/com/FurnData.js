@@ -1,12 +1,15 @@
 import Mats from "@/com/Mats"
 import Tool from '@/com/Tool'
-const {parseUnit,parseInp}=Tool;
+const {parseUnit,parseInp,parseDegree,parseRadian}=Tool;
 
 const FurnData={
     livForm:(obj,param)=>{
         param.px=FurnData.posParam(obj,'px');
         param.py=FurnData.posParam(obj,'py');
         param.pz=FurnData.posParam(obj,'pz');
+        param.rx=FurnData.rotParam(obj,'rx');
+        param.ry=FurnData.rotParam(obj,'ry');
+        param.rz=FurnData.rotParam(obj,'rz');
         return param;
     },
     sizeParam:(param)=>{
@@ -48,8 +51,27 @@ const FurnData={
                 return parseInp(obj.position[key[1]]);
             },
             set:(val)=>{
-                obj.data[key[1]]=val;
+                //obj.data[key]=val;
                 obj.position[key[1]]=parseUnit(val);
+            }
+        };
+        return def;
+    },
+    rotParam:(obj,key)=>{
+        let def={
+            value:'',
+            label:key,
+            inputType:'input',
+            valType:'number',
+            get:()=>{
+                return parseDegree(obj.rotation[key[1]]);
+            },
+            set:(val)=>{
+                //obj.data[key]=val;
+                val=parseRadian(val);
+                let euler=obj.rotation.clone();
+                euler[key[1]]=val;
+                obj.rotation.copy(euler);
             }
         };
         return def;
