@@ -13,13 +13,15 @@ import {
     OrthographicCamera,
     TorusBufferGeometry,
     MeshBasicMaterial,
-    TextureLoader,
+    TextureLoader, Box3Helper,
+    LineBasicMaterial
 } from 'three';
 import OrbitControls from 'three-orbitcontrols'
 import DiTai from '@/furns/DiTai'
 import TransformControls2 from '@/lib/TransformControls2'
 import BoxMat from '@/com/BoxMat'
 import Tool from "@/com/Tool";
+import MatTool from "@/com/MatTool";
 import Mats from "@/com/Mats";
 import BoxMesh from "@/Objects/BoxMesh";
 const {parseUnit}=Tool;
@@ -78,6 +80,9 @@ export default class WebglPart{
               zoom:500,
           },
         };
+
+        //视图改变时，关联视图的回调方法
+        this.onViewChange=()=>{}
     }
     init(){
         //容器尺寸
@@ -171,44 +176,22 @@ export default class WebglPart{
     }
     //建立辅助物体
     crtHelpObj(){
-        /*let boxGeo = new  BoxBufferGeometry(.4,.2,.8);
-        let boxMat = new  MeshLambertMaterial({
-            color: 0xff00ff,
-
-        });
-
-        let boxMesh = new  Mesh(boxGeo, boxMat);
-        boxMesh.name='boxMesh';
-        boxMesh.translateY(.1);
-        boxMesh.receiveShadow=true;
-        this.scene.add(boxMesh);
-        //machine(可选对象，是否可吸附)
-        this.transCtrl2.machine(boxMesh,true);
-        //手动选择
-        this.transCtrl2.attach(boxMesh);*/
-
-        let _this=this;
-
-        let boxMesh = new  BoxMesh(.4,.2,.6,Mats.huTao);
-        boxMesh.addEventListener('mat-success',function(){
-            _this.render();
-        });
-        this.scene.add(boxMesh);
-
-        /*let matTool=new BoxMat(Mats.huTao,(matParam)=>{
-            boxMesh.setMaterial(matParam);
-            _this.render();
-        },()=>{
-            console.log('贴图加载失败');
-        });*/
-
-
-        /*let axesHelper = new AxesHelper(20);
+        let axesHelper = new AxesHelper(20);
         axesHelper.translateY(.001);
-        this.scene.add(axesHelper);*/
+        this.scene.add(axesHelper);
     }
     test(){
-
+        let _this=this;
+        let boxMesh = new BoxMesh(.4,.2,.6);
+        //this.scene.add(boxMesh);
+        MatTool.parseMat('huTao',(matParam)=>{
+            boxMesh.setMaterial(matParam);
+            //_this.render();
+        });
+        //machine(可选对象，是否可吸附)
+        //this.transCtrl2.machine(boxMesh,true);
+        //手动选择
+        //this.transCtrl2.attach(boxMesh);
     }
     getCamera(key){
         if(key==='p'){
@@ -256,6 +239,10 @@ export default class WebglPart{
     //渲染
     render() {
         this.renderer.render(this.scene, this.camera);
+    }
+    //渲染，并更新虚拟框材质
+    renderAndUpdateDummyMat(){
+
     }
 
     /*.......事件相关........*/
@@ -305,14 +292,19 @@ export default class WebglPart{
         if(v===this.view){return}
         //浮动物体置空，以应对切换视图后，一拖拽就进行浮动检测
         //this.transCtrl2.floatObj=null;
-
         //重置变换器信息
         this.view=v;
         this.camera=this.getCamera(this.view);
         this.orbitCtrl = new OrbitControls(this.camera,this.domElement);
         this.transCtrl2.view=v;
         this.transCtrl2.camera=this.camera;
-        this.transCtrl2.setScalar();
+        if(this.transCtrl2.crting){
+            //如果是在创建中
+            //设置拖拽轴有效性，和显示效果
+            this.transCtrl2.setAxis(null);
+            this.transCtrl2.setDragAxisByView();
+            this.transCtrl2.setAxis(this.transCtrl2.axis);
+        }
         //根据所选物体重置平面
         this.transCtrl2.setInitPlane();
         //根据视图，设置轨道控制器的平移模式
@@ -323,7 +315,11 @@ export default class WebglPart{
         }
         //存储相机方向，用于正交平面转正交透视的判断
         this.camDir=this.getCamDir();
+        //恒定缩放
+        this.transCtrl2.setScalar();
         this.render();
+        //回调方法
+        this.onViewChange(v);
     }
     //根据视图和目标对象，设置相机位置
     setCameraPosByObj(){
@@ -335,7 +331,7 @@ export default class WebglPart{
         let transCtrl2=this.transCtrl2;
         //正在创建家具
         transCtrl2.crting=true;
-        //切换视图
+        //切换控制器
         transCtrl2.setMode('translate');
 
         //取消当前选择
@@ -348,7 +344,9 @@ export default class WebglPart{
         let diTai=new DiTai(param);
         diTai.visible=false;
         let _this=this;
-        diTai.addEventListener('map-loaded',function(){
+        diTai.addEventListener('mat-parsed',function(){
+            //解决线框深度被贴图遮挡的bug
+            transCtrl2.updateDummyMat();
             _this.render();
         });
         this.scene.add(diTai);
@@ -360,11 +358,14 @@ export default class WebglPart{
         //根据物体，设置鼠标与其它点位的位置关系
         transCtrl2.updateMouseAttrByObj();
         transCtrl2.setInitPlane();
-        if(transCtrl2.view==='p'){
-            diTai.visible=false;
-            transCtrl2.visible=false;
-        }
+
+        diTai.visible=false;
+        transCtrl2.visible=false;
     }
+
+
+
+
 
 }
 

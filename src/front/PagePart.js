@@ -13,6 +13,14 @@ export default class PagePart {
         this.bottomCont=document.getElementById('bottomCont');
         //工具栏高度
         this.toolbarH=document.getElementById('toolbar').clientHeight;
+        //工具栏里的工具按钮
+        this.translateBtn=document.getElementById('translateBtn');
+        this.rotateBtn=document.getElementById('rotateBtn');
+        this.crashBtn=document.getElementById('crashBtn');
+        this.floatBtn=document.getElementById('floatBtn');
+        this.normalToolBtn='bar-btn';
+        this.actToolClass='btn-act';
+        this.actToolBtn='bar-btn btn-act';
         //生产面板
         this.panelCrt=document.getElementById('panelCrt');
         //下拉列表
@@ -31,6 +39,7 @@ export default class PagePart {
         this.dragArrow=document.getElementById('dragArrow');
         //生成面板
         this.panelCrtWrapper=document.getElementById('panelCrtWrapper');
+
 
         //建立当前域的属性
         //当前家具类型
@@ -54,12 +63,19 @@ export default class PagePart {
         this.rotAttr=['rx','ry','rz'];
         this.comAttr=[...this.posAttr,...this.rotAttr];
 
+
+
         //与外部对接的方法
         this.onFurnAttrChange=()=>{};
         //将要建立家具的方法
         this.onCrtFurn=()=>{};
         //要建立表单的方法
         this.onCrtForm=()=>{};
+        //mode
+        this.onModeBtnChange=()=>{};
+        this.onCrashBtnChange=()=>{};
+        this.onFloatBtnChange=()=>{};
+
         //初始化
         this.init();
     }
@@ -86,6 +102,11 @@ export default class PagePart {
         /*----------页面的操作----------*/
         //页面变化 onWinResize
         window.addEventListener( 'resize',function(event){_this.onWinResize(event)});
+        /*----------工具栏的操作----------*/
+        this.translateBtn.addEventListener( 'click',function(event){_this.onModeBtnClick(event,'translate')});
+        this.rotateBtn.addEventListener( 'click',function(event){_this.onModeBtnClick(event,'rotate')});
+        this.floatBtn.addEventListener( 'click',function(event){_this.onFloatBtnClick(event,'crashable')});
+        this.crashBtn.addEventListener( 'click',function(event){_this.onCrashBtnClick(event,'floatable')});
         //面板的折叠
         this.dragArrow.addEventListener('click',function(event){_this.onDragArrowClick(event)});
         /*----------家具按钮的操作----------*/
@@ -132,6 +153,22 @@ export default class PagePart {
         furnsBtns.innerHTML=fragment;
     }
 
+    /*..........========工具栏方法========..........*/
+    onModeBtnClick(event,mode){
+        let node=event.target;
+        if(!this.hasClass(node,this.actToolClass)){
+            this.onModeBtnChange(mode);
+        }
+    }
+    onFloatBtnClick(event,name){
+        this.onFloatBtnChange();
+    }
+    onCrashBtnClick(event,name){
+        this.onCrashBtnChange();
+    }
+
+
+
     /*..........========事件初始化方法========..........*/
     /*..........页面事件方法..........*/
     //设置dom 高度自适应
@@ -154,8 +191,10 @@ export default class PagePart {
 
     /*..........家具事件方法..........*/
     onFurnClick(event){
-        let node=this.findNode(event.target,event.currentTarget,'furn');
-        if(node){
+        //let node=this.findNode(event.target,event.currentTarget,'furn');
+        let node=event.target;
+        console.log('node',node);
+        if(this.hasClass(node,'furn')){
             this.curFurnName=node.getAttribute('name');
             //家具按钮效果
             this.setFurnBtnStyle(node);
@@ -374,8 +413,7 @@ export default class PagePart {
         }
     }
     //根据不同的类型，建立不同的输入框
-
-     furnInp(param, key, value=null){
+    furnInp(param, key, value=null){
         //前端数据和图形数据相互补全
         //furnDefaultValue[key]=Tool.parseUnit(param.value);
         if(value===null){value=param.value}
@@ -391,8 +429,6 @@ export default class PagePart {
         }
         return fragment;
     }
-
-
     //input 类型的输入框
     inputFragment(label, valType, key, value){
         return `
@@ -465,7 +501,19 @@ export default class PagePart {
     }
     /*'''''''''''''''''''''''''''''''''''''''''''''''''''*/
 
+    /*-----------节点事件相关方法-----------*/
+    setModeBtn(mode,oldMode){
+        this[`${oldMode}Btn`].setAttribute('class',this.normalToolBtn);
+        this[`${mode}Btn`].setAttribute('class',this.actToolBtn);
+    }
+    toggleBtn(name,val){
+        if(val){
+            this[`${name}Btn`].setAttribute('class',this.actToolBtn);
+        }else{
+            this[`${name}Btn`].setAttribute('class',this.normalToolBtn);
+        }
 
+    }
 
     /* ...数据运算相关... */
     //测试数据有效性, 返回Boolean
@@ -503,7 +551,7 @@ export default class PagePart {
         return valid;
     }
     //解析输入框数据
-     parseFurnParam(valType, val, numFn='parseUnit'){
+    parseFurnParam(valType, val, numFn='parseUnit'){
         switch (valType){
             case 'number':
                 return Tool[numFn](val);
@@ -519,7 +567,6 @@ export default class PagePart {
         let formH=pannelH-btnsH;
         this.furnForm.style.height=formH+'px';
     }
-
     //查找父级，根据class
     findNode(target,root,val,attr='class'){
         let find=null;
@@ -546,8 +593,9 @@ export default class PagePart {
         return furnForm.getElementsByTagName('input');
     }
     //判断是否有 class
-     hasClass(target, val){
-        return target.getAttribute('class').split(' ').indexOf(val)!==-1
+    hasClass(target, val){
+        let cla=target.getAttribute('class');
+        return cla&&cla.split(' ').indexOf(val)!==-1
     }
     //取消当前家具按钮的激活
     unactFurn(curFurnBtn=this.curFurnBtn){

@@ -8,6 +8,7 @@ import {BoxBufferGeometry, MeshLambertMaterial, Mesh, Group, TextureLoader} from
 import BoxMesh  from '../Objects/BoxMesh'
 import Mats from '@/com/Mats'
 import Tool from '@/com/Tool'
+import MatTool from "@/com/MatTool";
 import FurnData from '@/com/FurnData'
 import Furn from '@/core/Furn'
 
@@ -74,8 +75,12 @@ class DiTai extends Furn{
                 list:['huTao','pingGuo'],
                 set:(val)=>{
                     let taiM=_this.getObjectByName('taiM');
-                    taiM.setMaterial(Mats[val]);
-                    _this.checkRender(taiM);
+                    //taiM.setMaterial(Mats[val]);
+                    //_this.checkRender(taiM);
+                    MatTool.parseMat(val,(matParam)=>{
+                        taiM.setMaterial(matParam);
+                        _this.matParsed();
+                    });
                 }
             })
         })
@@ -87,59 +92,34 @@ class DiTai extends Furn{
         let width=parseUnit(this.width);
         let depth=parseUnit(this.depth);
         let height=parseUnit(this.height);
-
+        let _this=this;
 
         //铝框
         //先解析材质，将材质变成数组结构，贴图先变成颜色
-
-        let meshLvK=new BoxMesh(this.getLw(),lh,this.getLd(),Mats[this.lvMat]);
+        let meshLvK=new BoxMesh(this.getLw(),lh,this.getLd());
         meshLvK.name='lvK';
         meshLvK.position.x=ls;
         meshLvK.position.z=ls;
         this.add(meshLvK);
 
+        MatTool.parseMat(this.lvMat,(matParam)=>{
+            meshLvK.setMaterial(matParam);
+            _this.matParsed();
+        });
+
         //台面
         let taiMat=Mats[this.taiMat];
         let textureLoader=new TextureLoader();
-        let _this=this;
-        /*let texture=textureLoader.load(taiMat.mapParam.imgSrc,function(){
-            console.log('wwwwwwwwwwwww');
-            taiMat.mapParam.imgSrc=texture;
-            let meshTaiM=new BoxMesh(width,height,depth,taiMat);
-            meshTaiM.name='taiM';
-            meshTaiM.translateY(lh);
-            _this.add(meshTaiM);
-        });*/
-        let meshTaiM=new BoxMesh(width,height,depth, Mats[this.taiMat]);
+
+
+        let meshTaiM=new BoxMesh(width,height,depth);
         meshTaiM.name='taiM';
         meshTaiM.translateY(lh);
         this.add(meshTaiM);
-    }
-
-    //添加渲染方法
-    checkRender(obj){
-        let _this=this;
-        let timeSpace=16;
-        let timeLength=0;
-        let maxTime=5000;
-        check();
-        function check(){
-            setTimeout(function(){
-                timeLength+=timeSpace;
-                if(timeLength>maxTime){
-                    console.log('图片加载时间过长');
-                    return;
-                }
-                if(obj.renderable){
-                    obj.renderable=false;
-                    setTimeout(function(){
-                        _this.mapLoaded()
-                    },100);
-                }else{
-                    check();
-                }
-            },timeSpace)
-        }
+        MatTool.parseMat(this.taiMat,(matParam)=>{
+            meshTaiM.setMaterial(matParam);
+            _this.matParsed();
+        });
     }
     //铝框宽
     getLw(){
@@ -149,9 +129,7 @@ class DiTai extends Furn{
     getLd(){
         return parseUnit(this.depth-this.ls*2);
     }
-
 }
-
 DiTai.text='地台';
 export default DiTai;
 

@@ -40,7 +40,7 @@ export default class TransformControls2 extends Group{
         //当前选择对轴
         this.axis=null;
         //模式：位移 translate，旋转 rotate，缩放scale
-        this.mode='rotate';
+        this.mode='translate';
         //选择的对象
         this.object=null;
         //所有事件无效
@@ -621,12 +621,21 @@ export default class TransformControls2 extends Group{
     crtDummy(){
         if(!this.object){return}
         this.dummyBound = new Box3Helper();
-        this.dummyBound.material.color.set(0x38ffff);
-        this.dummyBound.material.depthTest=false;
-        this.dummyBound.material.depthWrite=false;
+        this.dummyBound.material=new LineBasicMaterial({
+            color:0x38ffff,
+            depthTest:false,
+            depthWrite:false,
+            fog:false
+        });
         this.add( this.dummyBound );
     }
-
+    //更新虚拟框材质
+    //解决线框深度被贴图遮挡的bug
+    updateDummyMat(){
+        if(this.object){
+            this.dummyBound.material=this.dummyBound.material.clone();
+        }
+    }
 
     /*=======.......... mouseupFn ..........=======*/
     //鼠标抬起时，处于拖拽状态
@@ -993,16 +1002,17 @@ export default class TransformControls2 extends Group{
     //可浮动的变化
     toggleFloatable(){
         this.floatable=!this.floatable;
-        this.floatableChange(this.crashable);
+        this.floatableChange(this.floatable);
     }
     //模式设置
     setMode(mode){
-        console.log(this.mode);
         if(this.mode===mode){return}
         this.transform.getObjectByName(this.mode).visible=false;
         this.transform.getObjectByName(mode).visible=true;
+        //触发控制器类型的改变事件，一新，一旧
+        this.modeChange(mode,this.mode);
         this.mode=mode;
-        this.modeChange(mode);
+
     }
 
 
@@ -1151,8 +1161,9 @@ export default class TransformControls2 extends Group{
         this.dispatchEvent({type:'floatable-change',value:value});
     }
     //mode 改变时
-    modeChange(value){
-        this.dispatchEvent({type:'mode-change',value:value});
+    modeChange(value,oldValue){
+        console.log('=======mode-change-----');
+        this.dispatchEvent({type:'mode-change',value:value,oldValue:oldValue});
     }
     //家具创建成功后。用于响应前端状态
     crted(){

@@ -8,9 +8,11 @@ import BoxMesh  from '../Objects/BoxMesh'
 export default class DiTai extends Group{
     constructor(){
         super();
-        this.width=30;
+        this.data=null;
+        this.width=600;
         this.height=30;
-        this.depth=30;
+        this.depth=322;
+        this.text='家具名称';
     }
     //监听数据
     walk(){
@@ -35,9 +37,9 @@ export default class DiTai extends Group{
             })
         }
     }
-    //图片加载成功后
-    mapLoaded(){
-        this.dispatchEvent({type:'map-loaded'});
+    //材质解析完成事件
+    matParsed(){
+        this.dispatchEvent({type:'mat-parsed'});
     }
 
 }
