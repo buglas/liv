@@ -209,18 +209,51 @@ body{
 /*生产面板包裹器*/
 #panelCrtWrapper{
     position: absolute;
-    display: flex;
-    width: 199px;
+    /*display: flex;*/
+    width: 180px;
     top:1px;
     bottom: 0;
     right:0;
     transition: transform 100ms;
 }
-/*推拉箭头*/
-#dragArrowWrapper{
-    width: 19px;
+/*视图按钮*/
+#viewBtns{
+    position: absolute;
+    width: 24px;
+    top:6px;
+    left: 6px;
 }
+#viewBtnMain{
+    color:#c3c8d8;
+    background-color: rgba(12,20,38,.7);
+}
+#viewBtnsNormal{display: none;}
+.view-btn{
+    height: 24px;
+    padding-top:3px;
+    text-align: center;
+    color:#8b93ab;
+    background-color: rgba(22,30,48,.7);
+    cursor: pointer;
+
+}
+.view-btn:hover{
+    color: #fff;
+}
+
+/*推拉箭头*/
 #dragArrow{
+    position: absolute;
+    width: 14px;
+    height: 153px;
+    left:-14px;
+    top: 50%;
+    transform:translateY(-50%);
+    background-image: url("/images/fold.svg");
+    background-size:contain;
+    cursor: pointer;
+}
+/*#dragArrow{
     position: relative;
     height: 99px;
     top: 50%;
@@ -231,7 +264,7 @@ body{
     cursor: pointer;
     transform-origin: 100% 100%;
     transition: transform 60ms;
-}
+}*/
 /*#dragArrow:hover{
     transform:scale(2);
 }*/
@@ -247,7 +280,10 @@ body{
 
 /*生产面板*/
 #panelCrt{
+    display: flex;
+    flex-direction: column;
     width: 180px;
+    height: 100%;
 }
 /*按钮集合*/
 #btns{
@@ -255,5 +291,21 @@ body{
 }
 /*家具属性*/
 #furnForm{
+    flex:1;
     overflow-y: scroll;
+}
+
+::-webkit-scrollbar{
+    width: 4px;
+    height: 4px;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+    background: rgba(0,0,0,0.2);
+}
+::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+    border-radius: 0;
+    background: rgba(0,0,0,0.1);
 }

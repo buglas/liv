@@ -44,7 +44,7 @@ export default class WebglPart{
         this.viewH=null;
 
         //渲染器
-        this.renderer=new WebGLRenderer();
+        this.renderer=new WebGLRenderer({antialias:true});
         //canvas
         this.domElement=this.renderer.domElement;
         //背景色
@@ -120,25 +120,31 @@ export default class WebglPart{
     //初始化光
     initLight(){
         //环境光   环境光颜色RGB成分分别和物体材质颜色RGB成分分别相乘
-        let ambient = new  AmbientLight(0x444444);
+        let ambient = new  AmbientLight(0x222222);
         this.scene.add(ambient);
-        // 方向光
-        let directionalLight = new  DirectionalLight(0xffffff, 1);
+        // 主光源：平行光
+        let lightMain = new  DirectionalLight(0xffffff, 1.2);
         // 设置光源位置
-        directionalLight.position.set(parseUnit(3000),parseUnit(5000),parseUnit(2000));
-        this.scene.add(directionalLight);
+        lightMain.position.set(parseUnit(3000),parseUnit(4000),parseUnit(2000));
         // 设置用于计算阴影的光源对象
-        directionalLight.castShadow = true;
+        //lightMain.castShadow = true;
         // 设置计算阴影的区域，最好刚好紧密包围在对象周围
         // 计算阴影的区域过大：模糊  过小：看不到或显示不完整
-        directionalLight.shadow.camera.near = parseUnit(50);
-        directionalLight.shadow.camera.far = parseUnit(10000);
-        directionalLight.shadow.camera.left = parseUnit(-2000);
-        directionalLight.shadow.camera.right = parseUnit(2000);
-        directionalLight.shadow.camera.top = parseUnit(2000);
-        directionalLight.shadow.camera.bottom =parseUnit(-2000);
+        lightMain.shadow.camera.near = parseUnit(50);
+        lightMain.shadow.camera.far = parseUnit(10000);
+        lightMain.shadow.camera.left = parseUnit(-2000);
+        lightMain.shadow.camera.right = parseUnit(2000);
+        lightMain.shadow.camera.top = parseUnit(2000);
+        lightMain.shadow.camera.bottom =parseUnit(-2000);
         // 设置mapSize属性可以使阴影更清晰，不那么模糊
-        directionalLight.shadow.mapSize.set(2048,2048);
+        //lightMain.shadow.mapSize.set(1024,1024);
+        lightMain.shadow.mapSize.set(2048,2048);
+        this.scene.add(lightMain);
+        // 辅灯：平行光
+        let light2=new  DirectionalLight(0xffffff,.5);
+        light2.position.set(parseUnit(-1000),parseUnit(500),parseUnit(-2000));
+        this.scene.add(light2);
+
     }
     //初始化事件
     initEvents(){
@@ -183,10 +189,10 @@ export default class WebglPart{
     test(){
         let _this=this;
         let boxMesh = new BoxMesh(.4,.2,.6);
-        //this.scene.add(boxMesh);
+        this.scene.add(boxMesh);
         MatTool.parseMat('huTao',(matParam)=>{
             boxMesh.setMaterial(matParam);
-            //_this.render();
+            _this.render();
         });
         //machine(可选对象，是否可吸附)
         //this.transCtrl2.machine(boxMesh,true);

@@ -6,11 +6,6 @@
     <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
-<!--<div>
-<div id="view" style="width: 600px; height: 600px">
-
-</div>
-</div>-->
 <div id="prop">
     <!--工具条-->
     <div id="toolbar">
@@ -26,13 +21,15 @@
     <div id="bottomCont">
         <!--视图-->
         <div id="view"></div>
-        <!--工具面板-->
-        <!--生产面板包裹器-->
+        <!--视图按钮-->
+        <div id="viewBtns">
+            <div id="viewBtnMain" class="view-btn"></div>
+            <div id="viewBtnsNormal"></div>
+        </div>
+        <!--面板-->
         <div id="panelCrtWrapper">
             <!--推拉箭头-->
-            <div id="dragArrowWrapper">
-                <div id="dragArrow"></div>
-            </div>
+            <div id="dragArrow"></div>
             <!--生产面板-->
             <div id="panelCrt" class="panel">
                 <!--家具按钮部分-->
@@ -58,13 +55,8 @@
                 <!--<div class="line"></div>-->
                 <!--家具属性部分-->
                 <div id="furnForm" class="pd3"></div>
-
-
             </div>
         </div>
-
-        <!--编辑面板-->
-        <!--<div id="panelEdit" class="panel"></div>-->
     </div>
 </div>
 <div id="livList">

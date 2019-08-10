@@ -5,7 +5,6 @@ import PagePart from '@/front/PagePart'
 
 //图形相关的部分
 const webglPart=new WebglPart(document.getElementById('view'));
-
 //双向绑定器
 const mvvm=new Mvvm();
 //页面相关部分
@@ -70,6 +69,9 @@ page.onFloatBtnChange=()=>{
 };
 page.onCrashBtnChange=()=>{
     transCtrl2.toggleCrashable();
+};
+page.onViewBtnChange=(view)=>{
+    webglPart.changeView(view);
 };
 
 //家具属性表单值改变的情况，值是被验证过的有效值

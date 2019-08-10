@@ -21,6 +21,10 @@ export default class PagePart {
         this.normalToolBtn='bar-btn';
         this.actToolClass='btn-act';
         this.actToolBtn='bar-btn btn-act';
+        //视图按钮
+        this.viewBtns=document.getElementById('viewBtns');
+        this.viewBtnMain=document.getElementById('viewBtnMain');
+        this.viewBtnsNormal=document.getElementById('viewBtnsNormal');
         //生产面板
         this.panelCrt=document.getElementById('panelCrt');
         //下拉列表
@@ -62,8 +66,8 @@ export default class PagePart {
         this.posAttr=['px','py','pz'];
         this.rotAttr=['rx','ry','rz'];
         this.comAttr=[...this.posAttr,...this.rotAttr];
-
-
+        //视图集合
+        this.views={p:'P',t:'T',f:'F',l:'L'};
 
         //与外部对接的方法
         this.onFurnAttrChange=()=>{};
@@ -71,10 +75,14 @@ export default class PagePart {
         this.onCrtFurn=()=>{};
         //要建立表单的方法
         this.onCrtForm=()=>{};
-        //mode
+        //控制器类型的变化
         this.onModeBtnChange=()=>{};
+        //吸附的变化
         this.onCrashBtnChange=()=>{};
+        //浮动的变化
         this.onFloatBtnChange=()=>{};
+        //视图的变化
+        this.onViewBtnChange=()=>{};
 
         //初始化
         this.init();
@@ -90,6 +98,10 @@ export default class PagePart {
     initPage(){
         //初始化节点高度
         this.initDomSize();
+        //初始化工具栏按钮
+
+        //初始化视图按钮
+        this.initViewBtns('p');
         //初始化家具类型
         this.updateFurnType();
         //初始化家具按钮
@@ -107,7 +119,11 @@ export default class PagePart {
         this.rotateBtn.addEventListener( 'click',function(event){_this.onModeBtnClick(event,'rotate')});
         this.floatBtn.addEventListener( 'click',function(event){_this.onFloatBtnClick(event,'crashable')});
         this.crashBtn.addEventListener( 'click',function(event){_this.onCrashBtnClick(event,'floatable')});
-        //面板的折叠
+        /*----------视图的折叠----------*/
+        this.viewBtns.addEventListener('click',function(event){_this.onViewBtnClick(event)});
+        this.viewBtns.addEventListener('mouseover',function(event){_this.toggleViewBtn(event,'block')});
+        this.viewBtns.addEventListener('mouseout',function(event){_this.toggleViewBtn(event,'none')});
+        /*----------面板的折叠----------*/
         this.dragArrow.addEventListener('click',function(event){_this.onDragArrowClick(event)});
         /*----------家具按钮的操作----------*/
         this.furnsBtns.addEventListener('click',function(event){_this.onFurnClick(event)});
@@ -131,6 +147,18 @@ export default class PagePart {
         this.prop.style.height=winH+'px';
         this.bottomCont.style.height=winH-this.toolbarH+'px';
         this.prop.style.opacity='1';
+    }
+    //初始化视图按钮
+    initViewBtns(view){
+        let views=this.views;
+        this.viewBtnMain.setAttribute('data-value',view);
+        this.viewBtnMain.innerHTML=views[view];
+        let normalBtns='';
+        for(let v in views){
+            if(view===v){continue}
+            normalBtns+=`<div class="view-btn" data-value="${v}">${views[v]}</div>`;
+        }
+        this.viewBtnsNormal.innerHTML=normalBtns;
     }
     //初始化家具类型
     updateFurnType(furnType=this.furnType,curType=this.curType,){
@@ -167,8 +195,6 @@ export default class PagePart {
         this.onCrashBtnChange();
     }
 
-
-
     /*..........========事件初始化方法========..........*/
     /*..........页面事件方法..........*/
     //设置dom 高度自适应
@@ -180,6 +206,18 @@ export default class PagePart {
         this.updateFromScroll();
 
     }
+    //视图按钮的点击
+    onViewBtnClick(event){
+        let view=event.target.getAttribute('data-value');
+        this.initViewBtns(view);
+        this.onViewBtnChange(view);
+    }
+    //视图按钮的显示隐藏
+    toggleViewBtn(event,disp){
+        this.viewBtnsNormal.style.display=disp;
+
+    }
+
     //生成面板的折叠
     onDragArrowClick(event,panelCrtWrapper=this.panelCrtWrapper){
         if(panelCrtWrapper.getAttribute('class')==='fold'){
@@ -188,12 +226,10 @@ export default class PagePart {
             panelCrtWrapper.setAttribute('class','fold');
         }
     }
-
     /*..........家具事件方法..........*/
     onFurnClick(event){
         //let node=this.findNode(event.target,event.currentTarget,'furn');
         let node=event.target;
-        console.log('node',node);
         if(this.hasClass(node,'furn')){
             this.curFurnName=node.getAttribute('name');
             //家具按钮效果
@@ -292,7 +328,6 @@ export default class PagePart {
         }
         livList.style.display='none';
     }
-
 
     /*''''''''''--------家具单击事件相关方法--------''''''''''*/
     /*--------onFurnClick--------*/
