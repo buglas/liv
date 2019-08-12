@@ -142,7 +142,7 @@ export default class WebglPart{
 
         let light2 = new  DirectionalLight(0xffffff, .3);
         light2.position.set(-3000,1000,-2000);
-        this.scene.add(light2);
+        //this.scene.add(light2);
 
     }
     //初始化事件

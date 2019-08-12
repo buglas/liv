@@ -9,7 +9,7 @@ import DiTai from "@/furns/DiTai";
 class LvKuang extends BoxMesh{
     constructor(width,depth){
         super();
-        this.neiSuo=3;//铝框內缩
+        this.neiSuo=4;//铝框內缩
         this.width=this.getSize(width);
         this.height=25;
         this.depth=this.getSize(depth);
