@@ -52,6 +52,9 @@ export default class WebglPart{
 
         //场景
         this.scene=new Scene();
+        //this.scene.scale.set(0.001,0.001,0.001);
+        //this.world=new Group();
+
         //当前相机
         this.camera=null;
         //变换控制器
@@ -90,8 +93,6 @@ export default class WebglPart{
         this.viewH=this.viewDom.clientHeight;
         //初始化渲染器
         this.initRenderer();
-        //场景
-        this.scene=new Scene();
         this.camera=this.getCamera('p');
         //变换控制器
         this.transCtrl2=new TransformControls2(this.camera,this.domElement);
