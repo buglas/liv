@@ -24,12 +24,7 @@ const MatTool={
     },
     //单个贴图变数组
     getParam(matParam){
-        if(typeof matParam==='string'){
-            matParam=Mats[matParam];
-            if(!matParam){
-                console.error('Mats 材质库数据库中没有此材质名称');
-            }
-        }
+        matParam=MatTool.parseMatByStr(matParam);
         if(matParam.mapParam){
             let arry=[];
             for(let i=0;i<6;i++){
@@ -47,6 +42,15 @@ const MatTool={
         }else{
             return matParam;
         }
+    },
+    parseMatByStr(matParam){
+        if(typeof matParam==='string'){
+            matParam=Mats[matParam];
+            if(!matParam){
+                console.error('Mats 材质库数据库中没有此材质名称');
+            }
+        }
+        return matParam;
     },
     getImgProps(matParam){
         let props=[];

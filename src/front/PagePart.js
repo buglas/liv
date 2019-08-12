@@ -193,15 +193,14 @@ export default class PagePart {
     onFurnClick(event){
         //let node=this.findNode(event.target,event.currentTarget,'furn');
         let node=event.target;
-        console.log('node',node);
         if(this.hasClass(node,'furn')){
             this.curFurnName=node.getAttribute('name');
             //家具按钮效果
             this.setFurnBtnStyle(node);
             //创建家具
-            this.onCrtFurn(this.curFurnName,this.furnDefaultValue);
+            this.onCrtFurn(this.curFurnName);
 
-            //显示相应表单,并附带填补furnDefaultValue
+            //显示相应表单
             this.updateFrom();
 
             //触发表单建成事件
@@ -414,8 +413,7 @@ export default class PagePart {
     }
     //根据不同的类型，建立不同的输入框
     furnInp(param, key, value=null){
-        //前端数据和图形数据相互补全
-        //furnDefaultValue[key]=Tool.parseUnit(param.value);
+        //前端数据
         if(value===null){value=param.value}
         let fragment='';
         switch (param.inputType){

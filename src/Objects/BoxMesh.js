@@ -13,6 +13,8 @@ import {
     Matrix4,
     RepeatWrapping
 } from 'three'
+import MatTool from "@/com/MatTool";
+import Mats from "@/com/Mats"
 import BoxMat from '@/com/BoxMat'
 /*
 * matParam:
@@ -25,16 +27,14 @@ import BoxMat from '@/com/BoxMat'
 * type 贴图的布局方式，默认自动布局
 * */
 export default class BoxMesh extends Mesh{
-    constructor(w,h,d, matParam=null,type=null){
+    constructor(w=null,h,d,type=null){
         //先不指定形参
         super();
         this.org='lbc';
         //现给予，再改变
-        this.w=w;
-        this.h=h;
-        this.d=d;
-        //若非数组转数组，无贴图除外
-        this.matParam=matParam;
+        this.width=w;
+        this.height=h;
+        this.depth=d;
         //默认为null，会根据尺寸自动识别
         this.type=type;
         //是否自动变换类型
@@ -57,9 +57,12 @@ export default class BoxMesh extends Mesh{
 
 
         //初始化
-        this.init(matParam);
+        if(w!==null){
+            this.init(w,h,d);
+        }
+
     }
-    init(matParam){
+    init(){
         //建立顶点模型
         this.geoUpdate();
         this.material=new MeshLambertMaterial({color:0xcccccc});
@@ -71,26 +74,27 @@ export default class BoxMesh extends Mesh{
         //this.setMaterial(this.matParam);
     }
 
-    setW(w){
-        this.w=w;
+    setW(val){
+        this.width=parseInt(val);
         this.updateBySize();
     }
-    setH(h){
-        this.h=h;
+    setH(val){
+        this.height=parseInt(val);
         this.updateBySize();
     }
-    setD(d){
-        this.d=d;
+    setD(val){
+        this.depth=parseInt(val);
         this.updateBySize();
     }
     setSize(w,h,d){
-        this.w=w;
-        this.h=h;
-        this.d=d;
+        this.width=parseInt(w);
+        this.height=parseInt(h);
+        this.depth=parseInt(d);
         this.updateBySize();
     }
     //设置材质
     setMaterial(matParam){
+        matParam=MatTool.parseMatByStr(matParam);
         this.matParam=matParam;
         //材质解析
         //设置材质
@@ -131,12 +135,12 @@ export default class BoxMesh extends Mesh{
     }
     //建立顶点模型
     geoUpdate(){
-        const {w,h,d}=this;
-        this.geometry=new BoxBufferGeometry(w,h,d);
+        const {width,height,depth}=this;
+        this.geometry=new BoxBufferGeometry(width,height,depth);
         //模型基点定位
         if(this.org==='lbc'){
             let m = new Matrix4();
-            m.makeTranslation(w/2,h/2,d/2);
+            m.makeTranslation(width/2,height/2,depth/2);
             m.applyToBufferAttribute(this.geometry.attributes.position);
         }
 
@@ -150,9 +154,9 @@ export default class BoxMesh extends Mesh{
 
     //状态判断
     getType(){
-        let w={len:this.w,ind:null};
-        let h={len:this.h,ind:null};
-        let d={len:this.d,ind:null};
+        let w={len:this.width,ind:null};
+        let h={len:this.height,ind:null};
+        let d={len:this.depth,ind:null};
         let arr=[w,h,d];
         let a=arr[0];
         if(a.len>h.len){
@@ -291,6 +295,7 @@ export default class BoxMesh extends Mesh{
     }
     //新建材质的方法
     newMat(matParam){
+        console.log('----matParam',matParam);
         //获取有用的材质参数，比如color
         let param={color:0xffffff};
         for(let key in matParam){
