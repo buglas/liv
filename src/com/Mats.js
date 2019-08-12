@@ -4,7 +4,7 @@ const Mats={
         matType:'MeshLambertMaterial',
         mapParam:{
             imgSrc:'/src/images/huTao.jpg',
-            size:.3,
+            size:300,
         }
     },
     pingGuo:{
@@ -12,7 +12,7 @@ const Mats={
         matType:'MeshLambertMaterial',
         mapParam:{
             imgSrc:'/src/images/pingGuo.jpg',
-            size:.3,
+            size:300,
         }
     },
     ciZhuan1:{
@@ -20,7 +20,7 @@ const Mats={
         matType:'MeshPhongMaterial',
         mapParam:{
             imgSrc:'/src/images/ciZhuan1.jpg',
-            size:[.2,.1],
+            size:[300,300],
         }
     },
     lvMoSha:{

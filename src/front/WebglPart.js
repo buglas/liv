@@ -61,21 +61,21 @@ export default class WebglPart{
         //相机数据
         this.camerasAttr={
           p:{
-              cameraPos:new Vector3(parseUnit(1000),parseUnit(1200),parseUnit(2000)),
+              cameraPos:new Vector3(1000,1200,2000),
               targetPos:this.scene.position,
           },
           f:{
-              cameraPos:new Vector3(parseUnit(0),parseUnit(0),parseUnit(5000)),
+              cameraPos:new Vector3(0,0,5000),
               targetPos:this.scene.position,
               zoom:500,
           },
           t:{
-              cameraPos:new Vector3(parseUnit(0),parseUnit(5000),parseUnit(0)),
+              cameraPos:new Vector3(0,5000,0),
               targetPos:this.scene.position,
               zoom:500,
           },
           l:{
-              cameraPos:new Vector3(parseUnit(5000),parseUnit(0),parseUnit(0)),
+              cameraPos:new Vector3(5000,0,0),
               targetPos:this.scene.position,
               zoom:500,
           },
@@ -120,29 +120,28 @@ export default class WebglPart{
     //初始化光
     initLight(){
         //环境光   环境光颜色RGB成分分别和物体材质颜色RGB成分分别相乘
-        let ambient = new  AmbientLight(0x222222);
+        let ambient = new  AmbientLight(0x444444);
         this.scene.add(ambient);
-        // 主光源：平行光
-        let lightMain = new  DirectionalLight(0xffffff, 1.2);
+        // 方向光
+        let lightMain = new  DirectionalLight(0xffffff, .9);
         // 设置光源位置
-        lightMain.position.set(parseUnit(3000),parseUnit(4000),parseUnit(2000));
+        lightMain.position.set(3000,5000,2000);
+        this.scene.add(lightMain);
         // 设置用于计算阴影的光源对象
         //lightMain.castShadow = true;
         // 设置计算阴影的区域，最好刚好紧密包围在对象周围
         // 计算阴影的区域过大：模糊  过小：看不到或显示不完整
-        lightMain.shadow.camera.near = parseUnit(50);
-        lightMain.shadow.camera.far = parseUnit(10000);
-        lightMain.shadow.camera.left = parseUnit(-2000);
-        lightMain.shadow.camera.right = parseUnit(2000);
-        lightMain.shadow.camera.top = parseUnit(2000);
-        lightMain.shadow.camera.bottom =parseUnit(-2000);
+        lightMain.shadow.camera.near = 50;
+        lightMain.shadow.camera.far = 10000;
+        lightMain.shadow.camera.left = -2000;
+        lightMain.shadow.camera.right = 2000;
+        lightMain.shadow.camera.top = 2000;
+        lightMain.shadow.camera.bottom =-2000;
         // 设置mapSize属性可以使阴影更清晰，不那么模糊
-        //lightMain.shadow.mapSize.set(1024,1024);
         lightMain.shadow.mapSize.set(2048,2048);
-        this.scene.add(lightMain);
-        // 辅灯：平行光
-        let light2=new  DirectionalLight(0xffffff,.5);
-        light2.position.set(parseUnit(-1000),parseUnit(500),parseUnit(-2000));
+
+        let light2 = new  DirectionalLight(0xffffff, .3);
+        light2.position.set(-3000,1000,-2000);
         this.scene.add(light2);
 
     }
@@ -182,20 +181,20 @@ export default class WebglPart{
     }
     //建立辅助物体
     crtHelpObj(){
-        let axesHelper = new AxesHelper(20);
-        axesHelper.translateY(.001);
+        let axesHelper = new AxesHelper(2000);
+        axesHelper.translateY(1);
         this.scene.add(axesHelper);
     }
     test(){
         let _this=this;
-        let boxMesh = new BoxMesh(.4,.2,.6);
+        let boxMesh = new BoxMesh(400,200,600);
         this.scene.add(boxMesh);
         MatTool.parseMat('huTao',(matParam)=>{
             boxMesh.setMaterial(matParam);
             _this.render();
         });
         //machine(可选对象，是否可吸附)
-        //this.transCtrl2.machine(boxMesh,true);
+        this.transCtrl2.machine(boxMesh,true);
         //手动选择
         //this.transCtrl2.attach(boxMesh);
     }
@@ -208,7 +207,7 @@ export default class WebglPart{
     }
     //建立相机
     cameraP(){
-        let camera=new PerspectiveCamera(30,this.viewW/this.viewH,0.1,parseUnit(100000));
+        let camera=new PerspectiveCamera(30,this.viewW/this.viewH,0.1,100000);
         camera.position.copy(this.camerasAttr['p'].cameraPos.clone());
         camera.lookAt(this.camerasAttr['p'].targetPos.clone());
         camera.updateMatrixWorld();

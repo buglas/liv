@@ -14,6 +14,15 @@ export default class DiTai extends Group{
         this.depth=322;
         this.text='家具名称';
     }
+    //初始化属性、事件和模型
+    init(){
+        //初始化data 数据
+        this.initData();
+        //监听数据
+        this.walk();
+        //初始化模型
+        this.initMesh();
+    }
     //监听数据
     walk(){
         let _this=this;

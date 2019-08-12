@@ -86,8 +86,8 @@ page.onFurnAttrChange=(key,val)=>{
     }
     webglPart.render();
 };
-page.onCrtFurn=(curFurnName,furnDefaultValue,inpsDom)=>{
-    webglPart.crtFurn(curFurnName,furnDefaultValue);
+page.onCrtFurn=(curFurnName)=>{
+    webglPart.crtFurn(curFurnName);
     page.object=transCtrl2.object;
 
 };
