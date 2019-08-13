@@ -1,6 +1,6 @@
 import {Vector3} from "three";
 const Crash={
-    suction:100,
+    suction:.1,
     //获取拖拽中的物体位置
     getDragedObjPos:function(transCtrl2,fn){
         //发生碰撞的物体集合

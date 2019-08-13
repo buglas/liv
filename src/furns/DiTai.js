@@ -14,7 +14,7 @@ import LvKang from '@/parts/LvKuang'
 //模型数据关联表单数据
 const {livForm,sizeParam,matParam}=FurnData;
 class DiTai extends Furn{
-    constructor(param=null){
+    constructor(){
         super();
         //此中已有的参数是为常数，即不会出现在表单中定制
         this.name='DiTai';
@@ -37,16 +37,16 @@ class DiTai extends Furn{
                 min:400,
                 list:[400,600,900,1200,1350,1500,1650,1800],
                 set:(val)=>{
-                    _this.lvKuang.setW(val);
-                    _this.taiMian.setW(val);
+                    _this.setW(val);
                 }
             }),
             height:sizeParam({
                 label:'高度',
+                inputType:'selection',
                 value:30,
                 list:[30,50,100],
                 set:(val)=>{
-                    _this.taiMian.setH(val);
+                    _this.setH(val);
                 }
             }),
             depth:sizeParam({
@@ -55,8 +55,7 @@ class DiTai extends Furn{
                 min:200,
                 list:[322,418,610],
                 set:(val)=>{
-                    _this.lvKuang.setD(val);
-                    _this.taiMian.setD(val);
+                    _this.setD(val);
                 }
             }),
             mat:matParam({
@@ -64,10 +63,7 @@ class DiTai extends Furn{
                 label:'台面材质',
                 list:['huTao','pingGuo'],
                 set:(val)=>{
-                    MatTool.parseMat(val,(matParam)=>{
-                        _this.taiMian.setMaterial(matParam);
-                        _this.matParsed();
-                    });
+                    _this.setMat(val);
                 }
             })
         })
@@ -75,16 +71,41 @@ class DiTai extends Furn{
     //初始化模型
     initMesh(){
         //用get 事件的值触发set 事件
-        let {width,depth,height,mat}=this;
+        let {width,height,depth,mat}=this;
+        /*---------初始化网格对象---------*/
         //铝框
-        this.lvKuang=new LvKang(width,depth);
-        this.add(this.lvKuang);
+        this.lvKuang=new LvKang();
         //台面
-        this.taiMian=new BoxMesh(width,height,depth);
-        this.taiMian.name='taiM';
-        this.taiMian.translateY(this.lvKuang.height);
+        this.taiMian=new BoxMesh();
+        this.taiMian.y=this.lvKuang.height;
+        /*---------设置网格对象的尺寸---------*/
+        this.setW(width);
+        this.setH(height);
+        this.setD(depth);
+        /*---------设置网格对象的贴图---------*/
+        this.setMat(mat);
+        /*---------加载网格对象---------*/
+        this.add(this.lvKuang);
         this.add(this.taiMian);
-        this.mat=mat;
+    }
+    setW(val){
+        this.lvKuang.setLvkW(val);
+        this.taiMian.width=val;
+    }
+    setH(val){
+        this.taiMian.height=val;
+
+    }
+    setD(val){
+        this.lvKuang.setLvkD(val);
+        this.taiMian.depth=val;
+    }
+    setMat(val){
+        let _this=this;
+        MatTool.parseMat(val,(matParam)=>{
+            _this.taiMian.setMaterial(matParam);
+            _this.matParsed();
+        });
     }
 }
 DiTai.text='地台';

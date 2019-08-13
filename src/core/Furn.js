@@ -12,6 +12,7 @@ export default class DiTai extends Group{
         this.width=600;
         this.height=30;
         this.depth=322;
+
         this.text='家具名称';
     }
     //初始化属性、事件和模型
@@ -39,6 +40,9 @@ export default class DiTai extends Group{
 
                 },
                 set: function (val) {
+                    if(_this.data[key].valType==='number'){
+                        val=Math.round(val);
+                    }
                     _this.data[key].value=val;
                     //调用数据里的set 方法
                     _this.data[key].set(val);
@@ -50,5 +54,27 @@ export default class DiTai extends Group{
     matParsed(){
         this.dispatchEvent({type:'mat-parsed'});
     }
+
+    moveX(val){
+        this.translateX(val/1000);
+    }
+    moveY(val){
+        this.translateY(val/1000);
+    }
+    moveZ(val){
+        this.translateZ(val/1000);
+    }
+    move(x,y,z){
+        this.translateX(x/1000);
+        this.translateY(y/1000);
+        this.translateZ(z/1000);
+    }
+    getPos(axis){
+        return Math.round(this.position[axis]*1000);
+    }
+    setPos(axis,val){
+        this.position[axis]=Math.round(val)/1000;
+    }
+
 
 }

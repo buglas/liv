@@ -23,6 +23,19 @@ const Tool={
     parseRadian(degree){
         return Math.round(degree)*Math.PI/180;
     },
-
+    //深拷贝
+    deepCopy(obj) {
+        let result = Array.isArray(obj) ? [] : {};
+        for (let key in obj) {
+            if (obj.hasOwnProperty(key)) {
+                if (typeof obj[key] === 'object' && obj[key]!==null&& obj[key].constructor.name!='HTMLImageElement') {
+                    result[key] = Tool.deepCopy(obj[key]);   //递归复制
+                } else {
+                    result[key] = obj[key];
+                }
+            }
+        }
+        return result;
+    }
 };
 export default Tool;

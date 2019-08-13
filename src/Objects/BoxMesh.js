@@ -14,6 +14,7 @@ import {
     RepeatWrapping
 } from 'three'
 import MatTool from "@/com/MatTool";
+import Tool from "@/com/Tool";
 import Mats from "@/com/Mats"
 import BoxMat from '@/com/BoxMat'
 /*
@@ -27,14 +28,12 @@ import BoxMat from '@/com/BoxMat'
 * type 贴图的布局方式，默认自动布局
 * */
 export default class BoxMesh extends Mesh{
-    constructor(w=null,h,d,type=null){
+    constructor(w=null,h=null,d=null,type=null){
         //先不指定形参
         super();
+        //状态，0-未初始化，1-已初始化
+        this.state=0;
         this.org='lbc';
-        //现给予，再改变
-        this.width=w;
-        this.height=h;
-        this.depth=d;
         //默认为null，会根据尺寸自动识别
         this.type=type;
         //是否自动变换类型
@@ -54,15 +53,100 @@ export default class BoxMesh extends Mesh{
         this.boxMat=null;
         //promise 集合
         this.imgPros=[];
-
-
         //初始化
-        if(w!==null){
+        /*if(w!==null){
             this.init(w,h,d);
-        }
-
+        }*/
+        this.initData();
+        this.walk();
+        //现给予，再改变
+        this.width=w;
+        this.height=h;
+        this.depth=d;
     }
-    init(){
+    //初始数据
+    initData() {
+        let _this = this;
+        this.data={
+            x:{
+                value:null,
+            },
+            y:{
+                value:null,
+            },
+            z:{
+                value:null,
+            },
+            width:{
+                value:null,
+            },
+            height:{
+                value:null,
+            },
+            depth:{
+                value:null,
+            },
+            mat:{
+                value:null,
+            },
+        }
+    }
+    //监听数据
+    walk(){
+        let _this=this;
+        for(let k1 of ['x','y','z']){
+            Object.defineProperty(this, k1, {
+                get: function () {
+                    return this.data[k1].value;
+                },
+                set: function (val) {
+                    val=Math.round(val);
+                    _this.data[k1].value=val;
+                    _this.position[k1]=val/1000;
+                }
+            })
+        }
+        let posArr=['width','height','depth'];
+        posArr.forEach((k2,ind)=>{
+            Object.defineProperty(this, k2, {
+                get: function () {
+                    return this.data[k2].value;
+                },
+                set: function (val) {
+                    if(val===null){
+                        return;
+                    }
+                    val=Math.round(val);
+                    _this.data[k2].value=val;
+                    if(this.state){
+                        _this.updateBySize();
+                    }else{
+                        let arr=['width','height','depth'];
+                        arr.splice(ind,1);
+                        if(_this[arr[0]]!=null&&_this[arr[1]]!=null){
+                            _this.initMesh();
+                            _this.state=1;
+                            _this.geometryReadied();
+                        }
+                    }
+                }
+            })
+        })
+        Object.defineProperty(this, 'mat', {
+            get: function () {
+                return this.data['mat'].value;
+            },
+            set: function (val) {
+                if(val===null){
+                    return;
+                }
+                _this.data['mat'].value=val;
+                _this.setMaterial(val);
+            }
+        })
+    }
+    //初始化网格
+    initMesh(){
         //建立顶点模型
         this.geoUpdate();
         this.material=new MeshLambertMaterial({color:0xcccccc});
@@ -73,29 +157,57 @@ export default class BoxMesh extends Mesh{
         //设置材质
         //this.setMaterial(this.matParam);
     }
-
     setW(val){
-        this.width=parseInt(val);
-        this.updateBySize();
+        this.width=Math.round(val);
     }
     setH(val){
-        this.height=parseInt(val);
-        this.updateBySize();
+        this.height=Math.round(val);
     }
     setD(val){
-        this.depth=parseInt(val);
-        this.updateBySize();
+        this.depth=Math.round(val);
     }
     setSize(w,h,d){
-        this.width=parseInt(w);
-        this.height=parseInt(h);
-        this.depth=parseInt(d);
+        this.data.width=Math.round(w);
+        this.data.height=Math.round(h);
+        this.data.depth=Math.round(d);
         this.updateBySize();
     }
+    moveX(val){
+        val=Math.round(val);
+        let valNew=this['x']+val;
+        this.data['x'].val=Math.round(val);
+        this.translateX(valNew/1000);
+    }
+    moveY(val){
+        val=Math.round(val);
+        let valNew=this['y']+val;
+        this.data['y'].val=Math.round(val);
+        this.translateY(valNew/1000);
+    }
+    moveZ(val){
+        val=Math.round(val);
+        let valNew=this['z']+val;
+        this.data['z'].val=Math.round(val);
+        this.translateZ(valNew/1000);
+    }
+    move(x,y,z){
+        this.moveX(x);
+        this.moveY(y);
+        this.moveZ(z);
+    }
+    parseSize(val){
+        return Math.round(val);
+    }
+
     //设置材质
-    setMaterial(matParam){
-        matParam=MatTool.parseMatByStr(matParam);
-        this.matParam=matParam;
+    setMaterial(param){
+        if(typeof param==='string'){
+            this.matParam=Mats[param];
+        }else{
+            //考虑深拷贝
+            this.matParam=Tool.deepCopy(param);
+        }
+
         //材质解析
         //设置材质
         //先判断贴图参数,是否为数组.注意带有贴图的单个mat 已经被加工成数组了
@@ -135,7 +247,8 @@ export default class BoxMesh extends Mesh{
     }
     //建立顶点模型
     geoUpdate(){
-        const {width,height,depth}=this;
+        //const {width,height,depth}=this;
+        const [width,height,depth]=[this.width/1000,this.height/1000,this.depth/1000];
         this.geometry=new BoxBufferGeometry(width,height,depth);
         //模型基点定位
         if(this.org==='lbc'){
@@ -250,7 +363,7 @@ export default class BoxMesh extends Mesh{
         //let inc=[4,5].includes(i);
         if(size){
             //获取重复系数
-            let rep=this.getRepeat(i,size,inc);
+            let rep=this.getRepeat(i,size/1000,inc);
             //若贴图转了，重复参数也要翻转一下
             if(inc){
                 rep.reverse();
@@ -295,7 +408,6 @@ export default class BoxMesh extends Mesh{
     }
     //新建材质的方法
     newMat(matParam){
-        console.log('----matParam',matParam);
         //获取有用的材质参数，比如color
         let param={color:0xffffff};
         for(let key in matParam){
@@ -329,5 +441,10 @@ export default class BoxMesh extends Mesh{
         return new this.matStorage[matType](param);
     }
 
+    //事件
+    //尺寸准备好了
+    geometryReadied(){
+        this.dispatchEvent({type:'geometry-created'});
+    }
 
 }

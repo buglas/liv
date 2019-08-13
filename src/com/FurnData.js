@@ -48,10 +48,10 @@ const FurnData={
             inputType:'input',
             valType:'number',
             get:()=>{
-                return parseInt(obj.position[key[1]]);
+                return obj.getPos(key[1]);
             },
             set:(val)=>{
-                obj.position[key[1]]=parseInt(val);
+                obj.setPos(key[1],val);
             }
         };
         return def;
