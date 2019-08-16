@@ -1,7 +1,7 @@
 const Conf={
     //家具分类
     furnTypes:{
-        fttg:{text:'分体厅柜',chidren:['DiTai','DiGui']},
+        fttg:{text:'分体厅柜',chidren:['DiTai','DiGui','DiaoGui']},
         zttg:{text:'整体厅柜',chidren:['DiTai']},
     },
     //板材厚度

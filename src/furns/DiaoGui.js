@@ -14,19 +14,17 @@ import LvKang from '@/parts/LvKuang'
 let {thick}=Conf;
 //模型数据关联表单数据
 const {livForm,sizeParam,matParam,parseList}=FurnData;
-class DiGui extends Furn{
+class DiaoGui extends Furn{
     constructor(){
         super();
         //此中已有的参数是为常数，即不会出现在表单中定制
-        this.name='DiGui';
-        this.text='地柜';
-        //台面外扩尺寸
-        this.tmo=3;
+        this.name='DiaoGui';
+        this.text='吊柜';
         //会变化的尺寸列表
         this.widthListA=[450,600,900,1200,1350,1500,1800];
         this.widthListB=[450,600,900,1200,1350];
-        this.heightListA=[176,352,528,704,880,1056,1408,1760,2112];
-        this.heightListB=[176,352,528,704,880];
+        this.heightListA=[352,528,704,880,1056,1408];
+        this.heightListB=[352,528,704,880];
         //会引起变化的节点 sizeState
         this.section={
             width:[900,1350,1800],
@@ -59,7 +57,7 @@ class DiGui extends Furn{
             height:sizeParam({
                 label:'高度',
                 value:352,
-                min:352,
+                min:176,
                 max:2112,
                 list:_this.heightListA,
                 set:(val)=>{
@@ -76,15 +74,6 @@ class DiGui extends Furn{
                     _this.setD(val);
                 }
 
-            }),
-            taiMianH:sizeParam({
-                label:'台面高度',
-                inputType:'selection',
-                value:30,
-                list:[30,50,100],
-                set:(val)=>{
-                    _this.setTaiMianH(val);
-                }
             }),
             mat:matParam({
                 value:'huTao',
@@ -103,13 +92,10 @@ class DiGui extends Furn{
     initMesh(){
         //建模属性自下至上
         //用get 事件的值触发set 事件
-        let {width,depth,height,taiMianH,mat}=this;
+        let {width,depth,height,mat}=this;
 
         /*---------初始化网格对象---------*/
-        //铝框
-        this.lvKuang=new LvKang();
         //铝框高度
-        let lkH=this.lvKuang.height;
         //底板
         this.diBan=new BoxMesh();
         //背板
@@ -124,8 +110,6 @@ class DiGui extends Furn{
         this.zhShuBan2=new BoxMesh();
         //顶板
         this.dingBan=new BoxMesh();
-        //台面
-        this.taiMian=new BoxMesh();
 
         /*---------恒定尺寸---------*/
         this.diBan.height=thick;
@@ -137,18 +121,13 @@ class DiGui extends Furn{
         this.zhShuBan2.width=thick;
 
         /*---------恒定位置---------*/
-        this.taiMian.y=lkH;
-        this.ceBanL.y=lkH;
-        this.ceBanR.y=lkH;
-        this.zhShuBan1.y=lkH+thick;
-        this.zhShuBan2.y=lkH+thick;
-        this.diBan.y=lkH;
-        this.beiBan.y=lkH+thick;
+        this.zhShuBan1.y=thick;
+        this.zhShuBan2.y=thick;
+        this.beiBan.y=thick;
 
         this.diBan.x=thick;
         this.dingBan.x=thick;
         this.beiBan.x=thick;
-        this.taiMian.x=-this.tmo;
         this.zhShuBan1.z=thick;
         this.zhShuBan2.z=thick;
 
@@ -157,12 +136,10 @@ class DiGui extends Furn{
         this.setW(width);
         this.setH(height);
         this.setD(depth);
-        this.setTaiMianH(taiMianH);
 
         /*---------设置网格对象的贴图---------*/
         this.setMat(mat);
         /*---------加载网格对象---------*/
-        this.add(this.lvKuang);
         this.add(this.diBan);
         this.add(this.beiBan);
         this.add(this.ceBanL);
@@ -170,17 +147,14 @@ class DiGui extends Furn{
         this.add(this.zhShuBan1);
         this.add(this.zhShuBan2);
         this.add(this.dingBan);
-        this.add(this.taiMian);
     }
     //柜体尺寸
     setW(val){
         this.setSizeState('width',val);
         //部件尺寸
-        this.lvKuang.setLvkW(val);
         this.diBan.width=val-thick*2;
         this.dingBan.width=val-thick*2;
         this.beiBan.width=val-thick*2;
-        this.taiMian.width=val+this.tmo*2;
         //部件位置
 
         this.ceBanR.x=val-thick;
@@ -222,15 +196,13 @@ class DiGui extends Furn{
     }
     setH(val){
         this.setSizeState('height',val);
-        let lkH=this.lvKuang.height;
         this.beiBan.height=val-thick*2;
         this.ceBanL.height=val;
         this.ceBanR.height=val;
         this.zhShuBan1.height=val-thick*2;
         this.zhShuBan2.height=val-thick*2;
 
-        this.dingBan.y=val-thick+lkH;
-        this.taiMian.y=val+lkH;
+        this.dingBan.y=val-thick;
         let st=this.sizeState.height;
 
         if(st>0){
@@ -242,18 +214,12 @@ class DiGui extends Furn{
         }
     }
     setD(val){
-        this.lvKuang.setLvkD(val);
         this.diBan.depth=val;
         this.dingBan.depth=val;
         this.ceBanL.depth=val;
         this.ceBanR.depth=val;
         this.zhShuBan1.depth=val-thick;
         this.zhShuBan2.depth=val-thick;
-        this.taiMian.depth=val+thick;
-    }
-    //设置台面高度
-    setTaiMianH(val){
-        this.taiMian.height=val;
     }
     //设置材质
     setMat(val){
@@ -266,7 +232,6 @@ class DiGui extends Furn{
             _this.zhShuBan1.setMaterial(matParam);
             _this.zhShuBan2.setMaterial(matParam);
             _this.dingBan.setMaterial(matParam);
-            _this.taiMian.setMaterial(matParam);
             _this.matParsed();
         });
     }
@@ -278,8 +243,8 @@ class DiGui extends Furn{
         return height-2*thick;
     }
 }
-DiGui.text='地柜';
-export default DiGui;
+DiaoGui.text='吊柜';
+export default DiaoGui;
 
 
 

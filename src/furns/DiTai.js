@@ -33,7 +33,7 @@ class DiTai extends Furn{
         this.data=livForm(this,{
             width:sizeParam({
                 label:'宽度',
-                value:400,
+                value:1200,
                 min:400,
                 list:[400,600,900,1200,1350,1500,1650,1800],
                 set:(val)=>{

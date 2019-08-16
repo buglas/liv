@@ -251,7 +251,13 @@ export default class PagePart {
     /*..........表单事件方法..........*/
     //input 输入框的点击事件
     onPanelMousedown(event,livList=this.livList){
+        if(this.curInpDom){
+            //如果在点击面板前，已经缓存过里一个input
+            //检查和还原input值
+            this.checkAndRestore();
+        }
         if(this.hasClass(event.target,'liv-inp')){
+            //如果点击在了input上
             event.stopPropagation();
             if(livList.style.display==='block'&&this.curInpDom===event.target){
                 //如果下拉列表存在，且当前input 和现在点击的input 是同一个
@@ -291,12 +297,10 @@ export default class PagePart {
         }
     }
     //面板中input 的change
-    onPanelChange(event,curInpDom=this.curInpDom,inpVal=this.inpVal){
+    onPanelChange(event){
         if(event.target.getAttribute('data-mold')==='input'){
             //input 输入框手动输入,change 后,判断有效性
-            if(!this.checkVal().value){
-                curInpDom.value=inpVal;
-            }
+            this.checkAndRestore();
         }
     }
     //其它地方点击
@@ -437,6 +441,15 @@ export default class PagePart {
         //触发事件：selection 下拉列表的单击；input 键盘抬起后的有效数据
         this.onFurnAttrChange(name,furnVal);
     }
+
+    /*--------onPanelChange--------*/
+    //检查和还原input值
+    checkAndRestore(){
+        if(!this.checkVal().value){
+            this.curInpDom.value=this.inpVal;
+        }
+    }
+
 
     /*--------selected--------*/
     //在选择家具时，根据对象，显示相应表单

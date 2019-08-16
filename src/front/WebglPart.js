@@ -50,8 +50,6 @@ export default class WebglPart{
 
         //场景
         this.scene=new Scene();
-        //this.scene.scale.set(0.001,0.001,0.001);
-        //this.world=new Group();
 
         //当前相机
         this.camera=null;
@@ -100,7 +98,7 @@ export default class WebglPart{
         //建立辅助物体
         this.crtHelpObj();
         //测试模型
-        this.test();
+        //this.test();
         //初始化光
         this.initLight();
         //渲染
@@ -119,12 +117,12 @@ export default class WebglPart{
     //初始化光
     initLight(){
         //环境光   环境光颜色RGB成分分别和物体材质颜色RGB成分分别相乘
-        let ambient = new  AmbientLight(0x666666);
+        let ambient = new  AmbientLight(0x333333);
         this.scene.add(ambient);
         // 方向光
         let lightMain = new  DirectionalLight(0xffffff, .9);
         // 设置光源位置
-        lightMain.position.set(1,3,2);
+        lightMain.position.set(1,2,2);
         this.scene.add(lightMain);
         // 设置用于计算阴影的光源对象
         lightMain.castShadow = true;

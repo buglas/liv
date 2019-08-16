@@ -99,13 +99,12 @@ const FurnData={
         }
         return def;
     },
-    parseList:(list,fn)=>{
+    parseList:(list)=>{
         let newList={};
-        list.forEach((ele)=>{
-            fn(str);
+        list.forEach((num)=>{
+            newList[num]={text:num}
         });
         return newList;
-    }
-
+    },
 };
 export default FurnData;
