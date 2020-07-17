@@ -5,7 +5,7 @@
   "private": true,
   "dependencies": {
     "dat.gui": "^0.7.6",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "three-orbitcontrols": "^2.102.1"
   },
   "devDependencies": {
